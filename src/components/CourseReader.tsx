@@ -1,0 +1,1082 @@
+import React, { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
+import { useWebsiteContext } from '@/hooks/useWebsiteContext';
+import { sanitizeForTTS } from '@/utils/textUtils';
+import { 
+  BookOpen, 
+  MessageCircle, 
+  Volume2, 
+  VolumeX, 
+  CheckCircle, 
+  ArrowLeft,
+  Play,
+  Pause,
+  RotateCcw,
+  ChevronRight,
+  ChevronDown
+} from 'lucide-react';
+import SessionTimer from './SessionTimer';
+import CourseContentRenderer from './content/CourseContentRenderer';
+
+interface CourseReaderProps {
+  course: any;
+  user: any;
+  onEnd: () => void;
+  onShowPerformance: (sessionData: any) => void;
+  onSwitchToChat: () => void;
+}
+
+interface CourseSection {
+  id: string;
+  title: string;
+  content: string;
+  keyPoints: string[];
+  duration: number;
+  isCompleted: boolean;
+}
+
+interface Quiz {
+  id: string;
+  title: string;
+  questions: QuizQuestion[];
+  isCompleted: boolean;
+  score?: number;
+}
+
+interface QuizQuestion {
+  id: string;
+  question: string;
+  options: string[];
+  correctAnswer: number;
+  explanation?: string;
+}
+
+interface EnhancedCompanyContext {
+  company_name: string;
+  company_website: string | null;
+  company_logo: string | null;
+  websiteData: any;
+  contextSummary: string;
+}
+
+const CourseReader: React.FC<CourseReaderProps> = ({ 
+  course, 
+  user, 
+  onEnd, 
+  onShowPerformance, 
+  onSwitchToChat 
+}) => {
+  const { toast } = useToast();
+  const [sections, setSections] = useState<CourseSection[]>([]);
+  const [currentSection, setCurrentSection] = useState(0);
+  const [quizzes, setQuizzes] = useState<Quiz[]>([]);
+  const [currentQuiz, setCurrentQuiz] = useState<Quiz | null>(null);
+  const [quizAnswers, setQuizAnswers] = useState<{[key: string]: number}>({});
+  const [showQuiz, setShowQuiz] = useState(false);
+  const [isReading, setIsReading] = useState(false);
+  const [audioEnabled, setAudioEnabled] = useState(true);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [sessionStartTime, setSessionStartTime] = useState<Date>(new Date());
+  const [timerActive, setTimerActive] = useState(false);
+  const [totalInteractions, setTotalInteractions] = useState(0);
+  const [enhancedCompanyContext, setEnhancedCompanyContext] = useState<EnhancedCompanyContext | null>(null);
+  const { getEnhancedCompanyContext } = useWebsiteContext();
+
+  useEffect(() => {
+    initializeCourse();
+  }, [course]);
+
+  const initializeCourse = async () => {
+    setLoading(true);
+    try {
+      // Get enhanced company context if available
+      if (user?.group_id) {
+        const context = await getEnhancedCompanyContext(user.group_id);
+        setEnhancedCompanyContext(context);
+      }
+
+      // Use the course modules that were already created in CourseCreator
+      if (course.course_plan?.modules && Array.isArray(course.course_plan.modules)) {
+        const courseSections = course.course_plan.modules.map((module: any, index: number) => ({
+          id: `section-${index + 1}`,
+          title: module.title,
+          content: module.content,
+          keyPoints: module.keyPoints || [],
+          duration: module.duration || 3,
+          isCompleted: false
+        }));
+        setSections(courseSections);
+        console.log('Using existing course modules:', courseSections);
+        
+        // Generate quizzes based on course content
+        const generatedQuizzes = generateQuizzes(courseSections, course.course_plan?.numberOfQuizzes || 1);
+        setQuizzes(generatedQuizzes);
+        console.log('Generated quizzes:', generatedQuizzes);
+      } else {
+        // Fallback to generating sections if modules don't exist
+        const generatedSections = await generateCourseSections();
+        setSections(generatedSections);
+        console.log('Generated new course sections:', generatedSections);
+        
+        // Generate quizzes for fallback sections
+        const generatedQuizzes = generateQuizzes(generatedSections, 2);
+        setQuizzes(generatedQuizzes);
+      }
+      
+      // Start timer
+      setTimerActive(true);
+      setSessionStartTime(new Date());
+      
+      toast({
+        title: "Course Ready",
+        description: "You can now read through the course content at your own pace.",
+      });
+    } catch (error) {
+      console.error('Error initializing course:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load course content. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const generateCourseSections = async (): Promise<CourseSection[]> => {
+    const coursePlan = course.course_plan;
+    const trackType = course.track_type;
+    
+    // Generate comprehensive course content using AI
+    const systemPrompt = `You are an expert course content creator. Create a comprehensive, readable course structure for:
+
+Course: ${course.course_title}
+Track: ${trackType}
+Goal: ${coursePlan?.goal || coursePlan?.objective}
+Industry: ${coursePlan?.industry}
+Duration: ${coursePlan?.duration || '30'} minutes
+
+Create 3-5 sections with:
+1. Clear, engaging titles
+2. Detailed content (200-400 words per section)
+3. 3-5 key points per section
+4. Estimated reading time (2-5 minutes per section)
+
+Format as JSON with sections array containing: id, title, content, keyPoints, duration, isCompleted.`;
+
+    try {
+      const response = await supabase.functions.invoke('chat-with-tutor', {
+        body: {
+          message: "Generate course content structure",
+          chatHistory: [],
+          systemPrompt: systemPrompt,
+          courseId: course.id,
+          userId: user.id,
+          userName: user.full_name,
+          coursePlan: course.course_plan,
+          trackType: course.track_type,
+          companyName: enhancedCompanyContext?.company_name || 'General',
+          companyData: enhancedCompanyContext?.websiteData
+        }
+      });
+
+      if (response.error) throw new Error(response.error);
+
+      // Parse the AI response to extract course sections
+      const aiResponse = response.data.reply;
+      const sections = parseCourseSections(aiResponse, coursePlan);
+      
+      return sections;
+    } catch (error) {
+      console.error('Error generating course sections:', error);
+      // Fallback to basic sections
+      return generateFallbackSections(coursePlan, trackType);
+    }
+  };
+
+  const parseCourseSections = (aiResponse: string, coursePlan: any): CourseSection[] => {
+    try {
+      // Try to extract JSON from AI response
+      const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const parsed = JSON.parse(jsonMatch[0]);
+        if (parsed.sections && Array.isArray(parsed.sections)) {
+          return parsed.sections.map((section: any, index: number) => ({
+            id: section.id || `section-${index + 1}`,
+            title: section.title || `Section ${index + 1}`,
+            content: section.content || '',
+            keyPoints: section.keyPoints || [],
+            duration: section.duration || 3,
+            isCompleted: false
+          }));
+        }
+      }
+    } catch (error) {
+      console.error('Error parsing AI response:', error);
+    }
+    
+    // Fallback if parsing fails
+    return generateFallbackSections(coursePlan, course.track_type);
+  };
+
+  const generateFallbackSections = (coursePlan: any, trackType: string): CourseSection[] => {
+    const numberOfTopics = coursePlan.numberOfTopics || 3;
+    const duration = parseInt(coursePlan.duration || '30');
+    const topicDuration = Math.floor(duration / numberOfTopics);
+    
+    return Array.from({ length: numberOfTopics }, (_, index) => ({
+      id: `section-${index + 1}`,
+      title: `Topic ${index + 1}`,
+      content: `This is the content for topic ${index + 1}. It covers essential concepts and provides practical examples.`,
+      keyPoints: [
+        `Key point 1 for topic ${index + 1}`,
+        `Key point 2 for topic ${index + 1}`,
+        `Key point 3 for topic ${index + 1}`
+      ],
+      duration: topicDuration,
+      isCompleted: false
+    }));
+  };
+
+  const generateQuizzes = (sections: CourseSection[], numberOfQuizzes: number): Quiz[] => {
+    const quizzes: Quiz[] = [];
+    
+    for (let i = 0; i < numberOfQuizzes; i++) {
+      const quizSections = sections.slice(i * Math.ceil(sections.length / numberOfQuizzes), (i + 1) * Math.ceil(sections.length / numberOfQuizzes));
+      const quizTitle = `Knowledge Check ${i + 1}`;
+      
+      const questions: QuizQuestion[] = [];
+      
+      // Generate questions based on course content
+      quizSections.forEach((section, sectionIndex) => {
+        // Question 1: Based on section title
+        questions.push({
+          id: `q${i}-${sectionIndex}-1`,
+          question: `What is the main focus of "${section.title}"?`,
+          options: [
+            `Understanding ${section.title.toLowerCase()}`,
+            `Advanced techniques in ${section.title.toLowerCase()}`,
+            `Basic introduction to ${section.title.toLowerCase()}`,
+            `Practical applications of ${section.title.toLowerCase()}`
+          ],
+          correctAnswer: 0,
+          explanation: `This section focuses on understanding the core concepts of ${section.title}.`
+        });
+        
+        // Question 2: Based on key points
+        if (section.keyPoints.length > 0) {
+          const keyPoint = section.keyPoints[0];
+          questions.push({
+            id: `q${i}-${sectionIndex}-2`,
+            question: `Which of the following is a key point from this section?`,
+            options: [
+              keyPoint,
+              `Advanced techniques and strategies`,
+              `Historical background and context`,
+              `Future trends and developments`
+            ],
+            correctAnswer: 0,
+            explanation: `This key point is directly mentioned in the section content.`
+          });
+        }
+      });
+      
+      // Ensure we have at least 3 questions per quiz
+      while (questions.length < 3) {
+        questions.push({
+          id: `q${i}-extra-${questions.length}`,
+          question: `What is the primary goal of this course?`,
+          options: [
+            'To provide comprehensive understanding of the subject',
+            'To offer advanced technical skills',
+            'To introduce basic concepts only',
+            'To focus on theoretical knowledge'
+          ],
+          correctAnswer: 0,
+          explanation: 'The course aims to provide a comprehensive understanding of the subject matter.'
+        });
+      }
+      
+      quizzes.push({
+        id: `quiz-${i + 1}`,
+        title: quizTitle,
+        questions: questions.slice(0, 5), // Limit to 5 questions per quiz
+        isCompleted: false
+      });
+    }
+    
+    return quizzes;
+  };
+
+  const markSectionComplete = (sectionId: string) => {
+    setSections(prev => prev.map(section => 
+      section.id === sectionId 
+        ? { ...section, isCompleted: true } 
+        : section
+    ));
+    
+    // Update progress to include both sections and quizzes
+    const completedSections = sections.filter(s => s.isCompleted).length + 1; // +1 for current section
+    const completedQuizzes = quizzes.filter(q => q.isCompleted).length;
+    const totalItems = sections.length + quizzes.length;
+    const newProgress = Math.round(((completedSections + completedQuizzes) / totalItems) * 100);
+    setProgress(newProgress);
+
+    // Save section completion to database
+    saveSectionCompletion(sectionId, newProgress);
+  };
+
+  const saveSectionCompletion = async (sectionId: string, newProgress: number) => {
+    try {
+      // Get current performance record
+      const { data: currentPerformance, error: fetchError } = await supabase
+        .from('user_performance')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('course_id', course.id)
+        .single();
+
+      if (fetchError && fetchError.code !== 'PGRST116') {
+        console.error('Error fetching performance:', fetchError);
+        return;
+      }
+
+      // Prepare session data with section completion information
+      const sessionData = currentPerformance?.session_data as any || {};
+      const existingSections = sessionData.completedSections || {};
+      
+      const sectionData = {
+        ...sessionData,
+        completedSections: {
+          ...existingSections,
+          [sectionId]: {
+            completedAt: new Date().toISOString(),
+            sectionTitle: sections.find(s => s.id === sectionId)?.title || 'Unknown Section'
+          }
+        },
+        totalSectionsCompleted: Object.keys(existingSections).length + 1,
+        lastSectionCompleted: new Date().toISOString()
+      };
+
+      // Calculate points based on section completion (5 points per section)
+      const sectionPoints = 5;
+      const totalPoints = (currentPerformance?.points || 0) + sectionPoints;
+
+      // Update performance record
+      const { error: updateError } = await supabase
+        .from('user_performance')
+        .upsert({
+          user_id: user.id,
+          course_id: course.id,
+          progress: newProgress,
+          points: totalPoints,
+          total_interactions: totalInteractions + 1,
+          session_data: sectionData,
+          updated_at: new Date().toISOString(),
+          ...(newProgress >= 100 && { completed_at: new Date().toISOString() })
+        }, {
+          onConflict: 'user_id,course_id'
+        });
+
+      if (updateError) {
+        console.error('Error updating performance:', updateError);
+      } else {
+        console.log('Section completion saved successfully');
+      }
+    } catch (error) {
+      console.error('Error saving section completion:', error);
+    }
+  };
+
+  const speakSection = async (section: CourseSection) => {
+    if (!audioEnabled) return;
+    
+    setIsSpeaking(true);
+    try {
+      const speechText = sanitizeForTTS(section.content);
+      
+      const response = await supabase.functions.invoke('text-to-speech', {
+        body: { text: speechText }
+      });
+
+      if (response.error) throw new Error(response.error);
+
+      const audio = new Audio(`data:audio/mp3;base64,${response.data.audio}`);
+      audio.play();
+      
+      // Mark as completed after listening
+      setTimeout(() => {
+        markSectionComplete(section.id);
+        setIsSpeaking(false);
+      }, (section.duration * 60 * 1000) + 2000); // Duration + 2 seconds buffer
+      
+    } catch (error) {
+      console.error('Error playing audio:', error);
+      setIsSpeaking(false);
+    }
+  };
+
+  const handleTimeUp = () => {
+    endSession();
+  };
+
+  const endSession = async () => {
+    try {
+      const sessionDuration = Math.round((Date.now() - sessionStartTime.getTime()) / 1000);
+      const completedSections = sections.filter(s => s.isCompleted).length;
+      
+      const sessionData = {
+        courseId: course.id,
+        userId: user.id,
+        duration: sessionDuration,
+        progress: progress,
+        totalInteractions: totalInteractions,
+        completedSections: completedSections,
+        totalSections: sections.length,
+        mode: 'reading'
+      };
+
+      // Save session data
+      const { error } = await supabase
+        .from('user_performance')
+        .upsert({
+          user_id: user.id,
+          course_id: course.id,
+          progress: progress,
+          total_interactions: totalInteractions,
+          session_data: sessionData,
+          completed_at: progress >= 100 ? new Date().toISOString() : null
+        });
+
+      if (error) throw error;
+
+      onShowPerformance(sessionData);
+    } catch (error) {
+      console.error('Error ending session:', error);
+      onEnd();
+    }
+  };
+
+  const resetSession = () => {
+    setSections(prev => prev.map(section => ({ ...section, isCompleted: false })));
+    setQuizzes(prev => prev.map(quiz => ({ ...quiz, isCompleted: false, score: undefined })));
+    setProgress(0);
+    setCurrentSection(0);
+    setTimerActive(false);
+    setSessionStartTime(new Date());
+    setTimerActive(true);
+  };
+
+  const handleQuizComplete = (quizId: string, score: number) => {
+    setQuizzes(prev => prev.map(quiz => 
+      quiz.id === quizId 
+        ? { ...quiz, isCompleted: true, score } 
+        : quiz
+    ));
+    setShowQuiz(false);
+    setCurrentQuiz(null);
+    
+    // Update progress to include quiz completion
+    const completedSections = sections.filter(s => s.isCompleted).length;
+    const completedQuizzes = quizzes.filter(q => q.isCompleted).length + 1; // +1 for current quiz
+    const totalItems = sections.length + quizzes.length;
+    const newProgress = Math.round(((completedSections + completedQuizzes) / totalItems) * 100);
+    setProgress(newProgress);
+
+    // Save quiz performance to database
+    saveQuizPerformance(quizId, score);
+  };
+
+  const saveQuizPerformance = async (quizId: string, score: number) => {
+    try {
+      // Get current performance record
+      const { data: currentPerformance, error: fetchError } = await supabase
+        .from('user_performance')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('course_id', course.id)
+        .single();
+
+      if (fetchError && fetchError.code !== 'PGRST116') {
+        console.error('Error fetching performance:', fetchError);
+        return;
+      }
+
+      // Prepare session data with quiz information
+      const sessionData = currentPerformance?.session_data as any || {};
+      const existingQuizzes = sessionData.quizzes || {};
+      
+      const quizData = {
+        ...sessionData,
+        quizzes: {
+          ...existingQuizzes,
+          [quizId]: {
+            score,
+            completedAt: new Date().toISOString(),
+            questions: quizzes.find(q => q.id === quizId)?.questions.length || 0
+          }
+        },
+        totalQuizzesCompleted: Object.keys(existingQuizzes).length + 1,
+        lastQuizCompleted: new Date().toISOString()
+      };
+
+      // Calculate points based on quiz performance
+      const quizPoints = Math.round((score / 100) * 10); // 10 points max per quiz
+      const totalPoints = (currentPerformance?.points || 0) + quizPoints;
+
+      // Calculate new progress
+      const completedSections = sections.filter(s => s.isCompleted).length;
+      const completedQuizzes = quizzes.filter(q => q.isCompleted).length + 1; // +1 for current quiz
+      const totalItems = sections.length + quizzes.length;
+      const newProgress = Math.round(((completedSections + completedQuizzes) / totalItems) * 100);
+
+      // Update performance record
+      const { error: updateError } = await supabase
+        .from('user_performance')
+        .upsert({
+          user_id: user.id,
+          course_id: course.id,
+          progress: newProgress,
+          points: totalPoints,
+          total_interactions: totalInteractions + 1,
+          session_data: quizData,
+          updated_at: new Date().toISOString(),
+          ...(newProgress >= 100 && { completed_at: new Date().toISOString() })
+        }, {
+          onConflict: 'user_id,course_id'
+        });
+
+      if (updateError) {
+        console.error('Error updating performance:', updateError);
+      } else {
+        console.log('Quiz performance saved successfully');
+      }
+    } catch (error) {
+      console.error('Error saving quiz performance:', error);
+    }
+  };
+
+  // Sidebar component for course navigation
+  const CourseSidebar = () => {
+    const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
+
+    const toggleSection = (sectionId: string) => {
+      const newExpanded = new Set(expandedSections);
+      if (newExpanded.has(sectionId)) {
+        newExpanded.delete(sectionId);
+      } else {
+        newExpanded.add(sectionId);
+      }
+      setExpandedSections(newExpanded);
+    };
+
+    const scrollToSection = (sectionId: string) => {
+      const element = document.getElementById(sectionId);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    };
+
+    const startQuiz = (quiz: Quiz) => {
+      setCurrentQuiz(quiz);
+      setShowQuiz(true);
+      setQuizAnswers({});
+    };
+
+    return (
+      <div className="w-80 bg-white border-r border-gray-200 h-screen overflow-y-auto">
+        <div className="p-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">Course Outline</h2>
+          
+          {/* Sections */}
+          <div className="mb-6">
+            <h3 className="text-sm font-medium text-gray-700 mb-3">📚 Course Sections</h3>
+            <div className="space-y-2">
+              {sections.map((section, index) => (
+                <div key={section.id} className="border border-gray-200 rounded-lg">
+                  <button
+                    onClick={() => toggleSection(section.id)}
+                    className={`w-full p-3 text-left flex items-center justify-between hover:bg-gray-50 transition-colors ${
+                      section.isCompleted ? 'bg-green-50 border-green-200' : ''
+                    }`}
+                  >
+                    <div className="flex items-center space-x-3">
+                      <div className={`flex items-center justify-center w-6 h-6 rounded-full text-xs font-medium ${
+                        section.isCompleted 
+                          ? 'bg-green-500 text-white' 
+                          : 'bg-gray-200 text-gray-600'
+                      }`}>
+                        {section.isCompleted ? (
+                          <CheckCircle className="h-3 w-3" />
+                        ) : (
+                          index + 1
+                        )}
+                      </div>
+                      <span className={`text-sm font-medium ${
+                        section.isCompleted ? 'text-green-700' : 'text-gray-700'
+                      }`}>
+                        {section.title}
+                      </span>
+                    </div>
+                    {expandedSections.has(section.id) ? (
+                      <ChevronDown className="h-4 w-4 text-gray-400" />
+                    ) : (
+                      <ChevronRight className="h-4 w-4 text-gray-400" />
+                    )}
+                  </button>
+                  
+                  {expandedSections.has(section.id) && (
+                    <div className="border-t border-gray-200 bg-gray-50">
+                      <div className="p-3">
+                        <div className="space-y-2">
+                          <button
+                            onClick={() => scrollToSection(section.id)}
+                            className="w-full text-left p-2 text-sm text-gray-600 hover:bg-white hover:text-gray-800 rounded transition-colors"
+                          >
+                            📖 Overview
+                          </button>
+                          {section.keyPoints.map((point, pointIndex) => (
+                            <div key={pointIndex} className="p-2 text-xs text-gray-500">
+                              • {point}
+                            </div>
+                          ))}
+                          <div className="text-xs text-gray-400 mt-2">
+                            ⏱️ {section.duration} min read
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Quizzes */}
+          {quizzes.length > 0 && (
+            <div className="mb-6">
+              <h3 className="text-sm font-medium text-gray-700 mb-3">🧠 Knowledge Checks</h3>
+              <div className="space-y-2">
+                {quizzes.map((quiz, index) => (
+                  <div key={quiz.id} className="border border-gray-200 rounded-lg">
+                    <button
+                      onClick={() => startQuiz(quiz)}
+                      className={`w-full p-3 text-left flex items-center justify-between hover:bg-gray-50 transition-colors ${
+                        quiz.isCompleted ? 'bg-blue-50 border-blue-200' : ''
+                      }`}
+                    >
+                      <div className="flex items-center space-x-3">
+                        <div className={`flex items-center justify-center w-6 h-6 rounded-full text-xs font-medium ${
+                          quiz.isCompleted 
+                            ? 'bg-blue-500 text-white' 
+                            : 'bg-gray-200 text-gray-600'
+                        }`}>
+                          {quiz.isCompleted ? (
+                            <CheckCircle className="h-3 w-3" />
+                          ) : (
+                            'Q'
+                          )}
+                        </div>
+                        <span className={`text-sm font-medium ${
+                          quiz.isCompleted ? 'text-blue-700' : 'text-gray-700'
+                        }`}>
+                          {quiz.title}
+                        </span>
+                      </div>
+                      {quiz.score !== undefined && (
+                        <span className="text-xs text-gray-500">
+                          {quiz.score}%
+                        </span>
+                      )}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Progress Summary */}
+          <div className="mt-6 p-4 bg-blue-50 rounded-lg">
+            <h3 className="text-sm font-semibold text-blue-800 mb-2">Progress</h3>
+            <div className="text-sm text-blue-700">
+              {sections.filter(s => s.isCompleted).length} of {sections.length} sections completed
+            </div>
+            {quizzes.length > 0 && (
+              <div className="text-sm text-blue-700 mt-1">
+                {quizzes.filter(q => q.isCompleted).length} of {quizzes.length} quizzes completed
+              </div>
+            )}
+            <div className="mt-2 w-full bg-blue-200 rounded-full h-2">
+              <div 
+                className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                style={{ width: `${progress}%` }}
+              ></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Quiz component
+  const QuizComponent = ({ quiz, onComplete }: { quiz: Quiz; onComplete: (score: number) => void }) => {
+    const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+    const [answers, setAnswers] = useState<{[key: string]: number}>({});
+    const [showResults, setShowResults] = useState(false);
+    const [score, setScore] = useState(0);
+
+    const currentQuestion = quiz.questions[currentQuestionIndex];
+
+    const handleAnswerSelect = (answerIndex: number) => {
+      setAnswers(prev => ({
+        ...prev,
+        [currentQuestion.id]: answerIndex
+      }));
+    };
+
+    const handleNext = () => {
+      if (currentQuestionIndex < quiz.questions.length - 1) {
+        setCurrentQuestionIndex(currentQuestionIndex + 1);
+      } else {
+        // Calculate score
+        let correctAnswers = 0;
+        quiz.questions.forEach(question => {
+          if (answers[question.id] === question.correctAnswer) {
+            correctAnswers++;
+          }
+        });
+        const finalScore = Math.round((correctAnswers / quiz.questions.length) * 100);
+        setScore(finalScore);
+        setShowResults(true);
+      }
+    };
+
+    const handleComplete = () => {
+      onComplete(score);
+    };
+
+    if (showResults) {
+      return (
+        <div className="bg-white rounded-lg shadow-md border p-8 max-w-2xl mx-auto">
+          <div className="text-center">
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">Quiz Results</h2>
+            <div className="text-6xl font-bold text-blue-600 mb-4">{score}%</div>
+            <p className="text-gray-600 mb-6">
+              You got {Math.round((score / 100) * quiz.questions.length)} out of {quiz.questions.length} questions correct!
+            </p>
+            
+            <div className="space-y-4 mb-6">
+              {quiz.questions.map((question, index) => (
+                <div key={question.id} className="text-left p-4 border rounded-lg">
+                  <p className="font-medium text-gray-900 mb-2">
+                    {index + 1}. {question.question}
+                  </p>
+                  <div className="space-y-2">
+                    {question.options.map((option, optionIndex) => (
+                      <div
+                        key={optionIndex}
+                        className={`p-2 rounded ${
+                          optionIndex === question.correctAnswer
+                            ? 'bg-green-100 text-green-800'
+                            : answers[question.id] === optionIndex && optionIndex !== question.correctAnswer
+                            ? 'bg-red-100 text-red-800'
+                            : 'bg-gray-50 text-gray-700'
+                        }`}
+                      >
+                        {option}
+                        {optionIndex === question.correctAnswer && (
+                          <span className="ml-2 text-green-600">✓ Correct</span>
+                        )}
+                        {answers[question.id] === optionIndex && optionIndex !== question.correctAnswer && (
+                          <span className="ml-2 text-red-600">✗ Incorrect</span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                  {question.explanation && (
+                    <p className="text-sm text-gray-600 mt-2">
+                      <strong>Explanation:</strong> {question.explanation}
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
+            
+            <button
+              onClick={handleComplete}
+              className="bg-blue-500 text-white px-6 py-2 rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              Complete Quiz
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="bg-white rounded-lg shadow-md border p-8 max-w-2xl mx-auto">
+        <div className="mb-6">
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">{quiz.title}</h2>
+          <p className="text-gray-600">
+            Question {currentQuestionIndex + 1} of {quiz.questions.length}
+          </p>
+        </div>
+
+        <div className="mb-6">
+          <h3 className="text-lg font-medium text-gray-900 mb-4">
+            {currentQuestion.question}
+          </h3>
+          
+          <div className="space-y-3">
+            {currentQuestion.options.map((option, index) => (
+              <button
+                key={index}
+                onClick={() => handleAnswerSelect(index)}
+                className={`w-full p-4 text-left border rounded-lg transition-colors ${
+                  answers[currentQuestion.id] === index
+                    ? 'border-blue-500 bg-blue-50 text-blue-900'
+                    : 'border-gray-200 hover:border-gray-300 text-gray-700'
+                }`}
+              >
+                {option}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="flex justify-between">
+          <button
+            onClick={() => setCurrentQuestionIndex(Math.max(0, currentQuestionIndex - 1))}
+            disabled={currentQuestionIndex === 0}
+            className="px-4 py-2 text-gray-600 hover:text-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Previous
+          </button>
+          
+          <button
+            onClick={handleNext}
+            disabled={answers[currentQuestion.id] === undefined}
+            className={`px-6 py-2 rounded-md font-medium ${
+              answers[currentQuestion.id] !== undefined
+                ? 'bg-blue-500 text-white hover:bg-blue-600'
+                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+            }`}
+          >
+            {currentQuestionIndex === quiz.questions.length - 1 ? 'Finish Quiz' : 'Next'}
+          </button>
+        </div>
+      </div>
+    );
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-500 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading course content...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <div className="bg-white shadow-sm border-b">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            <div className="flex items-center space-x-4">
+              <button
+                onClick={onEnd}
+                className="flex items-center text-gray-600 hover:text-gray-800"
+              >
+                <ArrowLeft className="h-5 w-5 mr-2" />
+                Back to Courses
+              </button>
+              <div className="flex items-center space-x-2">
+                <BookOpen className="h-5 w-5 text-green-500" />
+                <h1 className="text-lg font-semibold text-gray-900">
+                  {course.course_title}
+                </h1>
+              </div>
+            </div>
+            
+            <div className="flex items-center space-x-4">
+              <SessionTimer 
+                durationString={course.course_plan?.duration || '30 minutes'} 
+                onTimeUp={handleTimeUp}
+                isActive={timerActive}
+              />
+              
+              <button
+                onClick={onSwitchToChat}
+                className="flex items-center px-4 py-2 text-sm font-medium text-green-600 hover:text-green-700"
+              >
+                <MessageCircle className="h-4 w-4 mr-2" />
+                Switch to Chat
+              </button>
+              
+              <button
+                onClick={() => setAudioEnabled(!audioEnabled)}
+                className="p-2 text-gray-600 hover:text-gray-800"
+              >
+                {audioEnabled ? <Volume2 className="h-5 w-5" /> : <VolumeX className="h-5 w-5" />}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Progress Bar */}
+      <div className="bg-white border-b">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-medium text-gray-700">
+              Progress: {progress}% ({sections.filter(s => s.isCompleted).length}/{sections.length} sections)
+            </span>
+            <button
+              onClick={resetSession}
+              className="flex items-center text-sm text-gray-600 hover:text-gray-800"
+            >
+              <RotateCcw className="h-4 w-4 mr-1" />
+              Reset
+            </button>
+          </div>
+          <div className="w-full bg-gray-200 rounded-full h-2">
+            <div 
+              className="bg-green-500 h-2 rounded-full transition-all duration-300"
+              style={{ width: `${progress}%` }}
+            ></div>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Content with Sidebar */}
+      <div className="flex h-screen">
+        {/* Sidebar */}
+        <CourseSidebar />
+        
+        {/* Course Content */}
+        <div className="flex-1 overflow-y-auto">
+          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            {showQuiz && currentQuiz ? (
+              <QuizComponent 
+                quiz={currentQuiz} 
+                onComplete={(score) => handleQuizComplete(currentQuiz.id, score)} 
+              />
+            ) : (
+              <div className="space-y-8">
+                {sections.map((section, index) => (
+                  <div 
+                    key={section.id}
+                    id={section.id}
+                    className={`bg-white rounded-lg shadow-md border transition-all duration-300 ${
+                      section.isCompleted ? 'border-green-200 bg-green-50' : 'border-gray-200'
+                    }`}
+                    style={{
+                      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+                      maxWidth: '800px',
+                      margin: '0 auto'
+                    }}
+                  >
+                    <div className="p-8">
+                      <div className="flex items-start justify-between mb-6">
+                      <div className="flex items-center space-x-3">
+                        <div className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-medium ${
+                          section.isCompleted 
+                            ? 'bg-green-500 text-white' 
+                            : 'bg-gray-200 text-gray-600'
+                        }`}>
+                          {section.isCompleted ? (
+                            <CheckCircle className="h-5 w-5" />
+                          ) : (
+                            index + 1
+                          )}
+                        </div>
+                        <h2 className="text-xl font-semibold text-gray-900">
+                          {section.title}
+                        </h2>
+                      </div>
+                      
+                                  <div className="flex items-center space-x-2">
+                        <span className="text-sm text-gray-500">
+                          {section.duration} min read
+                        </span>
+                        {audioEnabled && (
+                          <button
+                            onClick={() => speakSection(section)}
+                            disabled={isSpeaking}
+                            className="p-2 text-green-600 hover:text-green-700 disabled:opacity-50 rounded-full hover:bg-green-50"
+                            title={isSpeaking ? "Pause audio" : "Listen to section"}
+                          >
+                            {isSpeaking ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+                          </button>
+                        )}
+                      </div>
+                        </div>
+
+                      <div className="mb-6">
+                        <CourseContentRenderer content={section.content} />
+                      </div>
+
+                      {/* Key Points */}
+                      <div className="bg-blue-50 rounded-lg p-4">
+                        <h3 className="text-sm font-semibold text-blue-800 mb-3">
+                          Key Points:
+                        </h3>
+                        <ul className="space-y-2">
+                          {section.keyPoints.map((point, pointIndex) => (
+                            <li key={pointIndex} className="flex items-start space-x-2">
+                              <span className="text-blue-500 mt-1">•</span>
+                              <span className="text-sm text-blue-700">{point}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+
+                      {!section.isCompleted && (
+                        <div className="mt-6">
+                          <button
+                            onClick={() => markSectionComplete(section.id)}
+                            className="w-full bg-green-500 text-white py-3 px-4 rounded-md hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500 font-medium"
+                          >
+                            Mark as Complete
+                          </button>
+                        </div>
+                      )}
+                        </div>
+                      </div>
+                ))}
+
+                {/* Completion Message */}
+                {progress >= 100 && (
+                  <div className="mt-8 bg-green-50 border border-green-200 rounded-lg p-6 text-center">
+                    <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-4" />
+                    <h3 className="text-lg font-semibold text-green-800 mb-2">
+                      Course Completed!
+                    </h3>
+                    <p className="text-green-700 mb-4">
+                      Congratulations! You've successfully completed all sections and quizzes of this course.
+                    </p>
+                    <button
+                      onClick={endSession}
+                      className="bg-green-500 text-white px-6 py-2 rounded-md hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500"
+                    >
+                      View Performance
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default CourseReader; 

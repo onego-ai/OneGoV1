@@ -1,0 +1,9 @@
+
+{
+  "routes": [
+    {
+      "src": "/accept-invitation/([^/]+)",
+      "dest": "/index.html"
+    }
+  ]
+}
