@@ -16,6 +16,8 @@ serve(async (req) => {
   }
 
   try {
+    console.log('Chat function called');
+    
     const { 
       message, 
       chatHistory, 
@@ -29,9 +31,28 @@ serve(async (req) => {
       companyData
     } = await req.json();
 
+    console.log('Request data received:', {
+      message: message?.substring(0, 50) + '...',
+      courseId,
+      userId,
+      trackType,
+      companyName
+    });
+
     const groqApiKey = Deno.env.get('GROQ_API_KEY');
+    console.log('GROQ_API_KEY exists:', !!groqApiKey);
+    
     if (!groqApiKey) {
-      throw new Error('Groq API key not configured');
+      console.error('GROQ_API_KEY not configured');
+      return new Response(
+        JSON.stringify({ 
+          error: 'GROQ_API_KEY not configured. Please set it in Supabase Dashboard > Settings > Edge Functions' 
+        }),
+        { 
+          status: 500, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
     }
 
     // Build course modules context if available
@@ -90,6 +111,7 @@ Remember: MAXIMUM 40-100 words per response. Be engaging, concise, and use **bol
     ];
 
     console.log('Sending request to Groq...');
+    console.log('Messages count:', messages.length);
     
     const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
@@ -105,14 +127,36 @@ Remember: MAXIMUM 40-100 words per response. Be engaging, concise, and use **bol
       }),
     });
 
+    console.log('Groq response status:', response.status);
+
     if (!response.ok) {
       const errorText = await response.text();
       console.error('Groq API error:', errorText);
-      throw new Error(`Groq API error: ${response.status} ${errorText}`);
+      return new Response(
+        JSON.stringify({ error: `Groq API error: ${response.status} ${errorText}` }),
+        { 
+          status: 500, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
     }
 
     const data = await response.json();
+    console.log('Groq response data received');
+    
+    if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+      console.error('Invalid Groq response format:', data);
+      return new Response(
+        JSON.stringify({ error: 'Invalid response format from Groq API' }),
+        { 
+          status: 500, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    }
+    
     let reply = data.choices[0].message.content;
+    console.log('Generated reply length:', reply?.length);
 
     // Enhanced speech text replacement for better pronunciation
     const speechReply = reply
