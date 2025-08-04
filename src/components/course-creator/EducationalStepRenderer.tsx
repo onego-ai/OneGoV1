@@ -200,12 +200,12 @@ const EducationalStepRenderer: React.FC<EducationalStepRendererProps> = ({
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
-            <Crown className="h-4 w-4 text-blue-600" />
-            <span className="text-sm font-medium text-blue-900">
+            <Crown className="h-4 w-4 text-blue-600 flex-shrink-0" />
+            <span className="text-xs sm:text-sm font-medium text-blue-900">
               {creditInfo.planType} Plan
             </span>
           </div>
-          <div className="text-sm text-blue-700">
+          <div className="text-xs sm:text-sm text-blue-700">
             {creditInfo.availableCredits} / {creditInfo.totalCredits} credits available
           </div>
         </div>
@@ -222,37 +222,37 @@ const EducationalStepRenderer: React.FC<EducationalStepRendererProps> = ({
   switch (step) {
     case 1:
       return (
-        <div className="space-y-6">
+        <div className="space-y-4 sm:space-y-6">
           <div>
-            <h3 className="text-lg font-semibold mb-4">What level are you teaching?</h3>
+            <h3 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4">What level are you teaching?</h3>
             <RadioGroup
               value={formData.teachingLevel || ''}
               onValueChange={(value) => onFormDataChange({ ...formData, teachingLevel: value })}
-              className="space-y-3"
+              className="space-y-2 sm:space-y-3"
             >
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-2 touch-target">
                 <RadioGroupItem value="primary" id="primary" />
-                <Label htmlFor="primary">Primary School</Label>
+                <Label htmlFor="primary" className="text-sm sm:text-base">Primary School</Label>
               </div>
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-2 touch-target">
                 <RadioGroupItem value="secondary" id="secondary" />
-                <Label htmlFor="secondary">Secondary School</Label>
+                <Label htmlFor="secondary" className="text-sm sm:text-base">Secondary School</Label>
               </div>
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-2 touch-target">
                 <RadioGroupItem value="university" id="university" />
-                <Label htmlFor="university">University</Label>
+                <Label htmlFor="university" className="text-sm sm:text-base">University</Label>
               </div>
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-2 touch-target">
                 <RadioGroupItem value="college" id="college" />
-                <Label htmlFor="college">College</Label>
+                <Label htmlFor="college" className="text-sm sm:text-base">College</Label>
               </div>
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-2 touch-target">
                 <RadioGroupItem value="tafe" id="tafe" />
-                <Label htmlFor="tafe">TAFE / Community College</Label>
+                <Label htmlFor="tafe" className="text-sm sm:text-base">TAFE / Community College</Label>
               </div>
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-2 touch-target">
                 <RadioGroupItem value="professional" id="professional" />
-                <Label htmlFor="professional">Professional Development</Label>
+                <Label htmlFor="professional" className="text-sm sm:text-base">Professional Development</Label>
               </div>
             </RadioGroup>
           </div>
@@ -261,15 +261,15 @@ const EducationalStepRenderer: React.FC<EducationalStepRendererProps> = ({
 
     case 2:
       return (
-        <div className="space-y-6">
+        <div className="space-y-4 sm:space-y-6">
           <div>
-            <Label htmlFor="courseDescription">Describe Your Course</Label>
+            <Label htmlFor="courseDescription" className="text-sm sm:text-base">Describe Your Course</Label>
             <Textarea
               id="courseDescription"
               placeholder="What is your course about? What will students learn?"
               value={formData.courseDescription || ''}
               onChange={(e) => onFormDataChange({ ...formData, courseDescription: e.target.value })}
-              className="mt-2"
+              className="mt-2 text-sm sm:text-base"
               rows={4}
             />
           </div>
@@ -278,15 +278,15 @@ const EducationalStepRenderer: React.FC<EducationalStepRendererProps> = ({
 
     case 3:
       return (
-        <div className="space-y-6">
+        <div className="space-y-4 sm:space-y-6">
           <div>
-            <Label htmlFor="learnerDescription">Describe Your Learner</Label>
+            <Label htmlFor="learnerDescription" className="text-sm sm:text-base">Describe Your Learner</Label>
             <Textarea
               id="learnerDescription"
               placeholder="Who are your students? What's their background and experience level?"
               value={formData.learnerDescription || ''}
               onChange={(e) => onFormDataChange({ ...formData, learnerDescription: e.target.value })}
-              className="mt-2"
+              className="mt-2 text-sm sm:text-base"
               rows={4}
             />
           </div>
@@ -295,20 +295,20 @@ const EducationalStepRenderer: React.FC<EducationalStepRendererProps> = ({
 
     case 4:
       return (
-        <div className="space-y-6">
+        <div className="space-y-4 sm:space-y-6">
           <div>
-            <h3 className="text-xl font-semibold mb-4">📊 Course Structure</h3>
-            <p className="text-gray-600 mb-6">
+            <h3 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4">📊 Course Structure</h3>
+            <p className="text-sm sm:text-base text-gray-600 mb-4 sm:mb-6">
               Choose how you want your course structured. We'll automatically generate the appropriate number of sections and topics.
             </p>
             
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="space-y-4">
-                <label className="block text-sm font-medium text-gray-700 flex items-center">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+              <div className="space-y-3 sm:space-y-4">
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 flex items-center">
                   Number of Topics
                   {!isProUser && (
                     <div className="flex items-center space-x-1 text-yellow-600 ml-2">
-                      <Crown className="h-4 w-4" />
+                      <Crown className="h-3 w-3 sm:h-4 sm:w-4" />
                       <span className="text-xs font-medium">Pro+</span>
                     </div>
                   )}
@@ -321,7 +321,7 @@ const EducationalStepRenderer: React.FC<EducationalStepRendererProps> = ({
                     }
                   }}
                   disabled={!isProUser}
-                  className={`w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 ${
+                  className={`w-full p-2 sm:p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 text-sm sm:text-base touch-target ${
                     !isProUser ? 'bg-gray-100 cursor-not-allowed' : ''
                   }`}
                 >
@@ -339,12 +339,12 @@ const EducationalStepRenderer: React.FC<EducationalStepRendererProps> = ({
                 )}
               </div>
 
-              <div className="space-y-4">
-                <label className="block text-sm font-medium text-gray-700 flex items-center">
+              <div className="space-y-3 sm:space-y-4">
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 flex items-center">
                   Number of Quizzes
                   {!isProUser && (
                     <div className="flex items-center space-x-1 text-yellow-600 ml-2">
-                      <Crown className="h-4 w-4" />
+                      <Crown className="h-3 w-3 sm:h-4 sm:w-4" />
                       <span className="text-xs font-medium">Pro+</span>
                     </div>
                   )}
@@ -357,7 +357,7 @@ const EducationalStepRenderer: React.FC<EducationalStepRendererProps> = ({
                     }
                   }}
                   disabled={!isProUser}
-                  className={`w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 ${
+                  className={`w-full p-2 sm:p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 text-sm sm:text-base touch-target ${
                     !isProUser ? 'bg-gray-100 cursor-not-allowed' : ''
                   }`}
                 >
@@ -374,12 +374,12 @@ const EducationalStepRenderer: React.FC<EducationalStepRendererProps> = ({
                 )}
               </div>
 
-              <div className="space-y-4">
-                <label className="block text-sm font-medium text-gray-700 flex items-center">
+              <div className="space-y-3 sm:space-y-4">
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 flex items-center">
                   Course Duration
                   {!isProUser && (
                     <div className="flex items-center space-x-1 text-yellow-600 ml-2">
-                      <Crown className="h-4 w-4" />
+                      <Crown className="h-3 w-3 sm:h-4 sm:w-4" />
                       <span className="text-xs font-medium">Pro+</span>
                     </div>
                   )}
@@ -392,7 +392,7 @@ const EducationalStepRenderer: React.FC<EducationalStepRendererProps> = ({
                     }
                   }}
                   disabled={!isProUser}
-                  className={`w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 ${
+                  className={`w-full p-2 sm:p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 text-sm sm:text-base touch-target ${
                     !isProUser ? 'bg-gray-100 cursor-not-allowed' : ''
                   }`}
                 >
@@ -411,9 +411,9 @@ const EducationalStepRenderer: React.FC<EducationalStepRendererProps> = ({
               </div>
             </div>
 
-            <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-              <h4 className="font-medium text-blue-800 mb-2">Course Preview</h4>
-              <p className="text-sm text-blue-700">
+            <div className="mt-4 sm:mt-6 p-3 sm:p-4 bg-blue-50 rounded-lg">
+              <h4 className="font-medium text-blue-800 mb-2 text-sm sm:text-base">Course Preview</h4>
+              <p className="text-xs sm:text-sm text-blue-700">
                 Your course will have <strong>{formData.numberOfTopics || 3} main topics</strong> with{' '}
                 <strong>{formData.numberOfQuizzes || 1} knowledge checks</strong> and take approximately{' '}
                 <strong>{formData.duration || 30} minutes</strong> to complete.
@@ -421,8 +421,8 @@ const EducationalStepRenderer: React.FC<EducationalStepRendererProps> = ({
               {!isProUser && (
                 <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
                   <div className="flex items-center space-x-2">
-                    <Crown className="h-4 w-4 text-yellow-600" />
-                    <span className="text-sm text-yellow-800 font-medium">
+                    <Crown className="h-4 w-4 text-yellow-600 flex-shrink-0" />
+                    <span className="text-xs sm:text-sm text-yellow-800 font-medium">
                       Pro Feature: Upgrade to customize course structure
                     </span>
                   </div>

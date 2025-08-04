@@ -50,9 +50,9 @@ const MainLayout: React.FC<MainLayoutProps> = ({
         }}
       />
       
-      <div className="flex-1 flex flex-col lg:ml-64">
-        <header className="bg-white shadow-sm border-b px-6 py-4 flex justify-between items-center">
-          <div className="flex items-center">
+      <div className="flex-1 flex flex-col h-screen">
+        <header className="bg-white shadow-sm border-b px-6 py-4 flex justify-between items-center flex-shrink-0">
+          <div className="flex items-center min-w-0 flex-1">
             {companyLogo ? (
               <img 
                 src={companyLogo} 
@@ -63,14 +63,16 @@ const MainLayout: React.FC<MainLayoutProps> = ({
               <img 
                 src="https://onego.ai/wp-content/uploads/2025/01/ONEGO-Logo-e1737199296102.png" 
                 alt="ONEGO Learning" 
-                className="h-8"
+                className="h-8 object-contain"
               />
             )}
           </div>
-          <UserProfile user={profile} onTabChange={onTabChange} />
+          <div className="flex-shrink-0">
+            <UserProfile user={profile} onTabChange={onTabChange} />
+          </div>
         </header>
         
-        <main className="flex-1 overflow-y-auto">
+        <main className="flex-1 overflow-y-auto overflow-x-hidden">
           {children}
         </main>
       </div>

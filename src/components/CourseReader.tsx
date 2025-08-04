@@ -562,6 +562,7 @@ Format as JSON with sections array containing: id, title, content, keyPoints, du
   // Sidebar component for course navigation
   const CourseSidebar = () => {
     const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
+    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
     const toggleSection = (sectionId: string) => {
       const newExpanded = new Set(expandedSections);
@@ -578,146 +579,183 @@ Format as JSON with sections array containing: id, title, content, keyPoints, du
       if (element) {
         element.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
+      // Close sidebar on mobile after navigation
+      setIsSidebarOpen(false);
     };
 
     const startQuiz = (quiz: Quiz) => {
       setCurrentQuiz(quiz);
       setShowQuiz(true);
       setQuizAnswers({});
+      // Close sidebar on mobile after starting quiz
+      setIsSidebarOpen(false);
     };
 
     return (
-      <div className="w-80 bg-white border-r border-gray-200 h-screen overflow-y-auto">
-        <div className="p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Course Outline</h2>
-          
-          {/* Sections */}
-          <div className="mb-6">
-            <h3 className="text-sm font-medium text-gray-700 mb-3">📚 Course Sections</h3>
-            <div className="space-y-2">
-              {sections.map((section, index) => (
-                <div key={section.id} className="border border-gray-200 rounded-lg">
-                  <button
-                    onClick={() => toggleSection(section.id)}
-                    className={`w-full p-3 text-left flex items-center justify-between hover:bg-gray-50 transition-colors ${
-                      section.isCompleted ? 'bg-green-50 border-green-200' : ''
-                    }`}
-                  >
-                    <div className="flex items-center space-x-3">
-                      <div className={`flex items-center justify-center w-6 h-6 rounded-full text-xs font-medium ${
-                        section.isCompleted 
-                          ? 'bg-green-500 text-white' 
-                          : 'bg-gray-200 text-gray-600'
-                      }`}>
-                        {section.isCompleted ? (
-                          <CheckCircle className="h-3 w-3" />
+      <>
+        {/* Mobile Sidebar Toggle */}
+        <div className="lg:hidden fixed top-20 left-4 z-40">
+          <button
+            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+            className="bg-white p-2 rounded-lg shadow-md border border-gray-200 touch-target"
+          >
+            <BookOpen className="h-5 w-5 text-gray-600" />
+          </button>
+        </div>
+
+        {/* Mobile Sidebar Overlay */}
+        {isSidebarOpen && (
+          <div 
+            className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-50"
+            onClick={() => setIsSidebarOpen(false)}
+          />
+        )}
+
+        {/* Sidebar */}
+        <div className={`fixed lg:static inset-y-0 left-0 z-50 lg:z-auto transform ${
+          isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+        } transition-transform duration-300 ease-in-out lg:transition-none`}>
+          <div className="w-80 lg:w-80 bg-white border-r border-gray-200 h-screen overflow-y-auto">
+            <div className="p-4 sm:p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-base sm:text-lg font-semibold text-gray-900">Course Outline</h2>
+                <button
+                  onClick={() => setIsSidebarOpen(false)}
+                  className="lg:hidden p-1 text-gray-400 hover:text-gray-600 touch-target"
+                >
+                  <ArrowLeft className="h-5 w-5" />
+                </button>
+              </div>
+              
+              {/* Sections */}
+              <div className="mb-6">
+                <h3 className="text-xs sm:text-sm font-medium text-gray-700 mb-3">📚 Course Sections</h3>
+                <div className="space-y-2">
+                  {sections.map((section, index) => (
+                    <div key={section.id} className="border border-gray-200 rounded-lg">
+                      <button
+                        onClick={() => toggleSection(section.id)}
+                        className={`w-full p-2 sm:p-3 text-left flex items-center justify-between hover:bg-gray-50 transition-colors touch-target ${
+                          section.isCompleted ? 'bg-green-50 border-green-200' : ''
+                        }`}
+                      >
+                        <div className="flex items-center space-x-2 sm:space-x-3">
+                          <div className={`flex items-center justify-center w-5 h-5 sm:w-6 sm:h-6 rounded-full text-xs font-medium ${
+                            section.isCompleted 
+                              ? 'bg-green-500 text-white' 
+                              : 'bg-gray-200 text-gray-600'
+                          }`}>
+                            {section.isCompleted ? (
+                              <CheckCircle className="h-3 w-3" />
+                            ) : (
+                              index + 1
+                            )}
+                          </div>
+                          <span className={`text-xs sm:text-sm font-medium ${
+                            section.isCompleted ? 'text-green-700' : 'text-gray-700'
+                          }`}>
+                            {section.title}
+                          </span>
+                        </div>
+                        {expandedSections.has(section.id) ? (
+                          <ChevronDown className="h-4 w-4 text-gray-400" />
                         ) : (
-                          index + 1
+                          <ChevronRight className="h-4 w-4 text-gray-400" />
                         )}
-                      </div>
-                      <span className={`text-sm font-medium ${
-                        section.isCompleted ? 'text-green-700' : 'text-gray-700'
-                      }`}>
-                        {section.title}
-                      </span>
-                    </div>
-                    {expandedSections.has(section.id) ? (
-                      <ChevronDown className="h-4 w-4 text-gray-400" />
-                    ) : (
-                      <ChevronRight className="h-4 w-4 text-gray-400" />
-                    )}
-                  </button>
-                  
-                  {expandedSections.has(section.id) && (
-                    <div className="border-t border-gray-200 bg-gray-50">
-                      <div className="p-3">
-                        <div className="space-y-2">
-                          <button
-                            onClick={() => scrollToSection(section.id)}
-                            className="w-full text-left p-2 text-sm text-gray-600 hover:bg-white hover:text-gray-800 rounded transition-colors"
-                          >
-                            📖 Overview
-                          </button>
-                          {section.keyPoints.map((point, pointIndex) => (
-                            <div key={pointIndex} className="p-2 text-xs text-gray-500">
-                              • {point}
+                      </button>
+                      
+                      {expandedSections.has(section.id) && (
+                        <div className="border-t border-gray-200 bg-gray-50">
+                          <div className="p-2 sm:p-3">
+                            <div className="space-y-2">
+                              <button
+                                onClick={() => scrollToSection(section.id)}
+                                className="w-full text-left p-2 text-xs sm:text-sm text-gray-600 hover:bg-white hover:text-gray-800 rounded transition-colors touch-target"
+                              >
+                                📖 Overview
+                              </button>
+                              {section.keyPoints.map((point, pointIndex) => (
+                                <div key={pointIndex} className="p-2 text-xs text-gray-500">
+                                  • {point}
+                                </div>
+                              ))}
+                              <div className="text-xs text-gray-400 mt-2">
+                                ⏱️ {section.duration} min read
+                              </div>
                             </div>
-                          ))}
-                          <div className="text-xs text-gray-400 mt-2">
-                            ⏱️ {section.duration} min read
                           </div>
                         </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Quizzes */}
-          {quizzes.length > 0 && (
-            <div className="mb-6">
-              <h3 className="text-sm font-medium text-gray-700 mb-3">🧠 Knowledge Checks</h3>
-              <div className="space-y-2">
-                {quizzes.map((quiz, index) => (
-                  <div key={quiz.id} className="border border-gray-200 rounded-lg">
-                    <button
-                      onClick={() => startQuiz(quiz)}
-                      className={`w-full p-3 text-left flex items-center justify-between hover:bg-gray-50 transition-colors ${
-                        quiz.isCompleted ? 'bg-blue-50 border-blue-200' : ''
-                      }`}
-                    >
-                      <div className="flex items-center space-x-3">
-                        <div className={`flex items-center justify-center w-6 h-6 rounded-full text-xs font-medium ${
-                          quiz.isCompleted 
-                            ? 'bg-blue-500 text-white' 
-                            : 'bg-gray-200 text-gray-600'
-                        }`}>
-                          {quiz.isCompleted ? (
-                            <CheckCircle className="h-3 w-3" />
-                          ) : (
-                            'Q'
-                          )}
-                        </div>
-                        <span className={`text-sm font-medium ${
-                          quiz.isCompleted ? 'text-blue-700' : 'text-gray-700'
-                        }`}>
-                          {quiz.title}
-                        </span>
-                      </div>
-                      {quiz.score !== undefined && (
-                        <span className="text-xs text-gray-500">
-                          {quiz.score}%
-                        </span>
                       )}
-                    </button>
-                  </div>
-                ))}
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
-          )}
 
-          {/* Progress Summary */}
-          <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-            <h3 className="text-sm font-semibold text-blue-800 mb-2">Progress</h3>
-            <div className="text-sm text-blue-700">
-              {sections.filter(s => s.isCompleted).length} of {sections.length} sections completed
-            </div>
-            {quizzes.length > 0 && (
-              <div className="text-sm text-blue-700 mt-1">
-                {quizzes.filter(q => q.isCompleted).length} of {quizzes.length} quizzes completed
+              {/* Quizzes */}
+              {quizzes.length > 0 && (
+                <div className="mb-6">
+                  <h3 className="text-xs sm:text-sm font-medium text-gray-700 mb-3">🧠 Knowledge Checks</h3>
+                  <div className="space-y-2">
+                    {quizzes.map((quiz, index) => (
+                      <div key={quiz.id} className="border border-gray-200 rounded-lg">
+                        <button
+                          onClick={() => startQuiz(quiz)}
+                          className={`w-full p-2 sm:p-3 text-left flex items-center justify-between hover:bg-gray-50 transition-colors touch-target ${
+                            quiz.isCompleted ? 'bg-blue-50 border-blue-200' : ''
+                          }`}
+                        >
+                          <div className="flex items-center space-x-2 sm:space-x-3">
+                            <div className={`flex items-center justify-center w-5 h-5 sm:w-6 sm:h-6 rounded-full text-xs font-medium ${
+                              quiz.isCompleted 
+                                ? 'bg-blue-500 text-white' 
+                                : 'bg-gray-200 text-gray-600'
+                            }`}>
+                              {quiz.isCompleted ? (
+                                <CheckCircle className="h-3 w-3" />
+                              ) : (
+                                'Q'
+                              )}
+                            </div>
+                            <span className={`text-xs sm:text-sm font-medium ${
+                              quiz.isCompleted ? 'text-blue-700' : 'text-gray-700'
+                            }`}>
+                              {quiz.title}
+                            </span>
+                          </div>
+                          {quiz.score !== undefined && (
+                            <span className="text-xs text-gray-500">
+                              {quiz.score}%
+                            </span>
+                          )}
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Progress Summary */}
+              <div className="mt-6 p-3 sm:p-4 bg-blue-50 rounded-lg">
+                <h3 className="text-xs sm:text-sm font-semibold text-blue-800 mb-2">Progress</h3>
+                <div className="text-xs sm:text-sm text-blue-700">
+                  {sections.filter(s => s.isCompleted).length} of {sections.length} sections completed
+                </div>
+                {quizzes.length > 0 && (
+                  <div className="text-xs sm:text-sm text-blue-700 mt-1">
+                    {quizzes.filter(q => q.isCompleted).length} of {quizzes.length} quizzes completed
+                  </div>
+                )}
+                <div className="mt-2 w-full bg-blue-200 rounded-full h-2">
+                  <div 
+                    className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                    style={{ width: `${progress}%` }}
+                  ></div>
+                </div>
               </div>
-            )}
-            <div className="mt-2 w-full bg-blue-200 rounded-full h-2">
-              <div 
-                className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                style={{ width: `${progress}%` }}
-              ></div>
             </div>
           </div>
         </div>
-      </div>
+      </>
     );
   };
 
@@ -760,25 +798,25 @@ Format as JSON with sections array containing: id, title, content, keyPoints, du
 
     if (showResults) {
       return (
-        <div className="bg-white rounded-lg shadow-md border p-8 max-w-2xl mx-auto">
+        <div className="bg-white rounded-lg shadow-md border p-4 sm:p-6 lg:p-8 max-w-2xl mx-auto">
           <div className="text-center">
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">Quiz Results</h2>
-            <div className="text-6xl font-bold text-blue-600 mb-4">{score}%</div>
-            <p className="text-gray-600 mb-6">
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-3 sm:mb-4">Quiz Results</h2>
+            <div className="text-4xl sm:text-6xl font-bold text-blue-600 mb-3 sm:mb-4">{score}%</div>
+            <p className="text-sm sm:text-base text-gray-600 mb-4 sm:mb-6">
               You got {Math.round((score / 100) * quiz.questions.length)} out of {quiz.questions.length} questions correct!
             </p>
             
-            <div className="space-y-4 mb-6">
+            <div className="space-y-3 sm:space-y-4 mb-4 sm:mb-6">
               {quiz.questions.map((question, index) => (
-                <div key={question.id} className="text-left p-4 border rounded-lg">
-                  <p className="font-medium text-gray-900 mb-2">
+                <div key={question.id} className="text-left p-3 sm:p-4 border rounded-lg">
+                  <p className="font-medium text-sm sm:text-base text-gray-900 mb-2">
                     {index + 1}. {question.question}
                   </p>
                   <div className="space-y-2">
                     {question.options.map((option, optionIndex) => (
                       <div
                         key={optionIndex}
-                        className={`p-2 rounded ${
+                        className={`p-2 sm:p-3 rounded text-sm sm:text-base ${
                           optionIndex === question.correctAnswer
                             ? 'bg-green-100 text-green-800'
                             : answers[question.id] === optionIndex && optionIndex !== question.correctAnswer
@@ -797,7 +835,7 @@ Format as JSON with sections array containing: id, title, content, keyPoints, du
                     ))}
                   </div>
                   {question.explanation && (
-                    <p className="text-sm text-gray-600 mt-2">
+                    <p className="text-xs sm:text-sm text-gray-600 mt-2">
                       <strong>Explanation:</strong> {question.explanation}
                     </p>
                   )}
@@ -807,7 +845,7 @@ Format as JSON with sections array containing: id, title, content, keyPoints, du
             
             <button
               onClick={handleComplete}
-              className="bg-blue-500 text-white px-6 py-2 rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="bg-blue-500 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm sm:text-base touch-target w-full sm:w-auto"
             >
               Complete Quiz
             </button>
@@ -817,25 +855,25 @@ Format as JSON with sections array containing: id, title, content, keyPoints, du
     }
 
     return (
-      <div className="bg-white rounded-lg shadow-md border p-8 max-w-2xl mx-auto">
-        <div className="mb-6">
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">{quiz.title}</h2>
-          <p className="text-gray-600">
+      <div className="bg-white rounded-lg shadow-md border p-4 sm:p-6 lg:p-8 max-w-2xl mx-auto">
+        <div className="mb-4 sm:mb-6">
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">{quiz.title}</h2>
+          <p className="text-sm sm:text-base text-gray-600">
             Question {currentQuestionIndex + 1} of {quiz.questions.length}
           </p>
         </div>
 
-        <div className="mb-6">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">
+        <div className="mb-4 sm:mb-6">
+          <h3 className="text-base sm:text-lg font-medium text-gray-900 mb-3 sm:mb-4">
             {currentQuestion.question}
           </h3>
           
-          <div className="space-y-3">
+          <div className="space-y-2 sm:space-y-3">
             {currentQuestion.options.map((option, index) => (
               <button
                 key={index}
                 onClick={() => handleAnswerSelect(index)}
-                className={`w-full p-4 text-left border rounded-lg transition-colors ${
+                className={`w-full p-3 sm:p-4 text-left border rounded-lg transition-colors text-sm sm:text-base touch-target ${
                   answers[currentQuestion.id] === index
                     ? 'border-blue-500 bg-blue-50 text-blue-900'
                     : 'border-gray-200 hover:border-gray-300 text-gray-700'
@@ -847,11 +885,11 @@ Format as JSON with sections array containing: id, title, content, keyPoints, du
           </div>
         </div>
 
-        <div className="flex justify-between">
+        <div className="flex flex-col sm:flex-row sm:justify-between space-y-3 sm:space-y-0">
           <button
             onClick={() => setCurrentQuestionIndex(Math.max(0, currentQuestionIndex - 1))}
             disabled={currentQuestionIndex === 0}
-            className="px-4 py-2 text-gray-600 hover:text-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-4 py-2 text-gray-600 hover:text-gray-800 disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base touch-target"
           >
             Previous
           </button>
@@ -859,7 +897,7 @@ Format as JSON with sections array containing: id, title, content, keyPoints, du
           <button
             onClick={handleNext}
             disabled={answers[currentQuestion.id] === undefined}
-            className={`px-6 py-2 rounded-md font-medium ${
+            className={`px-4 sm:px-6 py-2 rounded-md font-medium text-sm sm:text-base touch-target ${
               answers[currentQuestion.id] !== undefined
                 ? 'bg-blue-500 text-white hover:bg-blue-600'
                 : 'bg-gray-300 text-gray-500 cursor-not-allowed'
@@ -888,24 +926,25 @@ Format as JSON with sections array containing: id, title, content, keyPoints, du
       {/* Header */}
       <div className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center space-x-4">
+          <div className="flex items-center justify-between h-14 sm:h-16">
+            <div className="flex items-center space-x-2 sm:space-x-4">
               <button
                 onClick={onEnd}
-                className="flex items-center text-gray-600 hover:text-gray-800"
+                className="flex items-center text-gray-600 hover:text-gray-800 text-sm sm:text-base touch-target"
               >
-                <ArrowLeft className="h-5 w-5 mr-2" />
-                Back to Courses
+                <ArrowLeft className="h-4 w-4 sm:h-5 sm:w-5 mr-1 sm:mr-2" />
+                <span className="hidden sm:inline">Back to Courses</span>
+                <span className="sm:hidden">Back</span>
               </button>
               <div className="flex items-center space-x-2">
-                <BookOpen className="h-5 w-5 text-green-500" />
-                <h1 className="text-lg font-semibold text-gray-900">
+                <BookOpen className="h-4 w-4 sm:h-5 sm:w-5 text-green-500" />
+                <h1 className="text-base sm:text-lg font-semibold text-gray-900 truncate max-w-32 sm:max-w-none">
                   {course.course_title}
                 </h1>
               </div>
             </div>
             
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-2 sm:space-x-4">
               <SessionTimer 
                 durationString={course.course_plan?.duration || '30 minutes'} 
                 onTimeUp={handleTimeUp}
@@ -914,17 +953,18 @@ Format as JSON with sections array containing: id, title, content, keyPoints, du
               
               <button
                 onClick={onSwitchToChat}
-                className="flex items-center px-4 py-2 text-sm font-medium text-green-600 hover:text-green-700"
+                className="flex items-center px-2 sm:px-4 py-2 text-xs sm:text-sm font-medium text-green-600 hover:text-green-700 touch-target"
               >
-                <MessageCircle className="h-4 w-4 mr-2" />
-                Switch to Chat
+                <MessageCircle className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                <span className="hidden sm:inline">Switch to Chat</span>
+                <span className="sm:hidden">Chat</span>
               </button>
               
               <button
                 onClick={() => setAudioEnabled(!audioEnabled)}
-                className="p-2 text-gray-600 hover:text-gray-800"
+                className="p-1 sm:p-2 text-gray-600 hover:text-gray-800 touch-target"
               >
-                {audioEnabled ? <Volume2 className="h-5 w-5" /> : <VolumeX className="h-5 w-5" />}
+                {audioEnabled ? <Volume2 className="h-4 w-4 sm:h-5 sm:w-5" /> : <VolumeX className="h-4 w-4 sm:h-5 sm:w-5" />}
               </button>
             </div>
           </div>
@@ -935,15 +975,15 @@ Format as JSON with sections array containing: id, title, content, keyPoints, du
       <div className="bg-white border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-medium text-gray-700">
+            <span className="text-xs sm:text-sm font-medium text-gray-700">
               Progress: {progress}% ({sections.filter(s => s.isCompleted).length}/{sections.length} sections)
             </span>
             <button
               onClick={resetSession}
-              className="flex items-center text-sm text-gray-600 hover:text-gray-800"
+              className="flex items-center text-xs sm:text-sm text-gray-600 hover:text-gray-800 touch-target"
             >
-              <RotateCcw className="h-4 w-4 mr-1" />
-              Reset
+              <RotateCcw className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+              <span className="hidden sm:inline">Reset</span>
             </button>
           </div>
           <div className="w-full bg-gray-200 rounded-full h-2">
@@ -961,15 +1001,15 @@ Format as JSON with sections array containing: id, title, content, keyPoints, du
         <CourseSidebar />
         
         {/* Course Content */}
-        <div className="flex-1 overflow-y-auto">
-          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="flex-1 overflow-y-auto lg:ml-0">
+          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8">
             {showQuiz && currentQuiz ? (
               <QuizComponent 
                 quiz={currentQuiz} 
                 onComplete={(score) => handleQuizComplete(currentQuiz.id, score)} 
               />
             ) : (
-              <div className="space-y-8">
+              <div className="space-y-6 sm:space-y-8">
                 {sections.map((section, index) => (
                   <div 
                     key={section.id}
@@ -983,88 +1023,88 @@ Format as JSON with sections array containing: id, title, content, keyPoints, du
                       margin: '0 auto'
                     }}
                   >
-                    <div className="p-8">
-                      <div className="flex items-start justify-between mb-6">
-                      <div className="flex items-center space-x-3">
-                        <div className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-medium ${
-                          section.isCompleted 
-                            ? 'bg-green-500 text-white' 
-                            : 'bg-gray-200 text-gray-600'
-                        }`}>
-                          {section.isCompleted ? (
-                            <CheckCircle className="h-5 w-5" />
-                          ) : (
-                            index + 1
+                    <div className="p-4 sm:p-6 lg:p-8">
+                      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between mb-4 sm:mb-6">
+                        <div className="flex items-center space-x-2 sm:space-x-3 mb-3 sm:mb-0">
+                          <div className={`flex items-center justify-center w-6 h-6 sm:w-8 sm:h-8 rounded-full text-xs sm:text-sm font-medium ${
+                            section.isCompleted 
+                              ? 'bg-green-500 text-white' 
+                              : 'bg-gray-200 text-gray-600'
+                          }`}>
+                            {section.isCompleted ? (
+                              <CheckCircle className="h-3 w-3 sm:h-5 sm:w-5" />
+                            ) : (
+                              index + 1
+                            )}
+                          </div>
+                          <h2 className="text-lg sm:text-xl font-semibold text-gray-900">
+                            {section.title}
+                          </h2>
+                        </div>
+                        
+                        <div className="flex items-center space-x-2">
+                          <span className="text-xs sm:text-sm text-gray-500">
+                            {section.duration} min read
+                          </span>
+                          {audioEnabled && (
+                            <button
+                              onClick={() => speakSection(section)}
+                              disabled={isSpeaking}
+                              className="p-1 sm:p-2 text-green-600 hover:text-green-700 disabled:opacity-50 rounded-full hover:bg-green-50 touch-target"
+                              title={isSpeaking ? "Pause audio" : "Listen to section"}
+                            >
+                              {isSpeaking ? <Pause className="h-3 w-3 sm:h-4 sm:w-4" /> : <Play className="h-3 w-3 sm:h-4 sm:w-4" />}
+                            </button>
                           )}
                         </div>
-                        <h2 className="text-xl font-semibold text-gray-900">
-                          {section.title}
-                        </h2>
                       </div>
-                      
-                                  <div className="flex items-center space-x-2">
-                        <span className="text-sm text-gray-500">
-                          {section.duration} min read
-                        </span>
-                        {audioEnabled && (
-                          <button
-                            onClick={() => speakSection(section)}
-                            disabled={isSpeaking}
-                            className="p-2 text-green-600 hover:text-green-700 disabled:opacity-50 rounded-full hover:bg-green-50"
-                            title={isSpeaking ? "Pause audio" : "Listen to section"}
-                          >
-                            {isSpeaking ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
-                          </button>
-                        )}
-                      </div>
-                        </div>
 
-                      <div className="mb-6">
+                      <div className="mb-4 sm:mb-6">
                         <CourseContentRenderer content={section.content} />
                       </div>
 
                       {/* Key Points */}
-                      <div className="bg-blue-50 rounded-lg p-4">
-                        <h3 className="text-sm font-semibold text-blue-800 mb-3">
+                      <div className="bg-blue-50 rounded-lg p-3 sm:p-4">
+                        <h3 className="text-xs sm:text-sm font-semibold text-blue-800 mb-2 sm:mb-3">
                           Key Points:
                         </h3>
-                        <ul className="space-y-2">
+                        <ul className="space-y-1 sm:space-y-2">
                           {section.keyPoints.map((point, pointIndex) => (
                             <li key={pointIndex} className="flex items-start space-x-2">
                               <span className="text-blue-500 mt-1">•</span>
-                              <span className="text-sm text-blue-700">{point}</span>
+                              <span className="text-xs sm:text-sm text-blue-700">{point}</span>
                             </li>
                           ))}
                         </ul>
                       </div>
 
                       {!section.isCompleted && (
-                        <div className="mt-6">
+                        <div className="mt-4 sm:mt-6">
                           <button
                             onClick={() => markSectionComplete(section.id)}
-                            className="w-full bg-green-500 text-white py-3 px-4 rounded-md hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500 font-medium"
+                            className="w-full bg-green-500 text-white py-2 sm:py-3 px-4 rounded-md hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500 font-medium text-sm sm:text-base touch-target"
                           >
                             Mark as Complete
                           </button>
                         </div>
                       )}
-                        </div>
-                      </div>
+                    </div>
+                  </div>
                 ))}
 
                 {/* Completion Message */}
                 {progress >= 100 && (
-                  <div className="mt-8 bg-green-50 border border-green-200 rounded-lg p-6 text-center">
-                    <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-4" />
-                    <h3 className="text-lg font-semibold text-green-800 mb-2">
+                  <div className="mt-6 sm:mt-8 bg-green-50 border border-green-200 rounded-lg p-4 sm:p-6 text-center">
+                    <CheckCircle className="h-8 w-8 sm:h-12 sm:w-12 text-green-500 mx-auto mb-3 sm:mb-4" />
+                    <h3 className="text-base sm:text-lg font-semibold text-green-800 mb-2">
                       Course Completed!
                     </h3>
-                    <p className="text-green-700 mb-4">
+                    <p className="text-sm sm:text-base text-green-700 mb-3 sm:mb-4">
                       Congratulations! You've successfully completed all sections and quizzes of this course.
                     </p>
                     <button
                       onClick={endSession}
-                      className="bg-green-500 text-white px-6 py-2 rounded-md hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500"
+                      className="bg-green-500 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-md hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500 text-sm sm:text-base touch-target"
                     >
                       View Performance
                     </button>

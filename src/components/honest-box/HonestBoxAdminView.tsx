@@ -230,7 +230,7 @@ const HonestBoxAdminView: React.FC = () => {
   // If user doesn't have a group_id, show error message
   if (!profile?.group_id) {
     return (
-      <div className="p-4 sm:p-6 max-w-7xl mx-auto">
+      <div className="p-4 sm:p-6">
         <div className="bg-red-50 border border-red-200 rounded-lg p-4">
           <div className="flex items-center space-x-2">
             <MessageSquare className="h-5 w-5 text-red-600 flex-shrink-0" />
@@ -254,7 +254,7 @@ const HonestBoxAdminView: React.FC = () => {
   // If showing user view, render the user form component
   if (showUserView) {
     return (
-      <div className="p-4 sm:p-6 max-w-7xl mx-auto space-y-4 sm:space-y-6">
+      <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-4 sm:mb-6 space-y-4 sm:space-y-0">
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">HonestBox - User View</h1>
@@ -274,7 +274,7 @@ const HonestBoxAdminView: React.FC = () => {
   }
 
   return (
-    <div className="p-4 sm:p-6 max-w-7xl mx-auto space-y-4 sm:space-y-6">
+    <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center space-y-4 sm:space-y-0">
         <div>

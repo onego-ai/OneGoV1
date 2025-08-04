@@ -68,21 +68,23 @@ const CourseCard: React.FC<CourseCardProps> = ({
   const hasModules = course.course_plan?.modules && Array.isArray(course.course_plan.modules) && course.course_plan.modules.length > 0;
 
   return (
-    <div className="bg-white border rounded-lg p-6 hover:shadow-md transition-shadow">
-      <div className="flex items-start justify-between mb-4">
-        <div className="flex-1">
-          <h4 className="font-semibold text-lg mb-2">{course.course_title}</h4>
-          <p className="text-gray-600 text-sm">{course.track_type}</p>
+    <div className="bg-white border rounded-lg p-4 sm:p-6 hover:shadow-md transition-shadow">
+      <div className="flex items-start justify-between mb-3 sm:mb-4">
+        <div className="flex-1 min-w-0">
+          <h4 className="font-semibold text-base sm:text-lg mb-1 sm:mb-2 truncate">{course.course_title}</h4>
+          <p className="text-gray-600 text-xs sm:text-sm">{course.track_type}</p>
           {course.course_plan?.goal && (
-            <p className="text-sm text-gray-500 mt-1">Goal: {course.course_plan.goal}</p>
+            <p className="text-xs sm:text-sm text-gray-500 mt-1 line-clamp-2">Goal: {course.course_plan.goal}</p>
           )}
         </div>
-        {getStatusIcon(status)}
+        <div className="flex-shrink-0 ml-2">
+          {getStatusIcon(status)}
+        </div>
       </div>
       
       {progress && (
-        <div className="mb-4">
-          <div className="flex items-center justify-between text-sm mb-2">
+        <div className="mb-3 sm:mb-4">
+          <div className="flex items-center justify-between text-xs sm:text-sm mb-2">
             <span>Progress</span>
             <span className="font-medium">{progress.progress || 0}%</span>
           </div>
@@ -102,24 +104,24 @@ const CourseCard: React.FC<CourseCardProps> = ({
 
       {/* Course Modules Preview */}
       {hasModules && (
-        <div className="mb-4">
+        <div className="mb-3 sm:mb-4">
           <button
             onClick={() => setShowModules(!showModules)}
-            className="flex items-center space-x-2 text-sm text-gray-600 hover:text-gray-800 mb-2"
+            className="flex items-center space-x-2 text-xs sm:text-sm text-gray-600 hover:text-gray-800 mb-2"
           >
-            {showModules ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+            {showModules ? <ChevronUp className="h-3 w-3 sm:h-4 sm:w-4" /> : <ChevronDown className="h-3 w-3 sm:h-4 sm:w-4" />}
             <span>{showModules ? 'Hide' : 'Show'} Course Structure ({course.course_plan.modules.length} modules)</span>
           </button>
           
           {showModules && (
-            <div className="space-y-3">
+            <div className="space-y-2 sm:space-y-3">
               {course.course_plan.modules.map((module: any, index: number) => (
-                <div key={module.id || index} className="bg-gray-50 rounded-lg p-3">
-                  <div className="flex items-start justify-between mb-2">
-                    <h5 className="font-medium text-sm text-gray-800">{module.title}</h5>
-                    <span className="text-xs text-gray-500">{module.duration} min</span>
+                <div key={module.id || index} className="bg-gray-50 rounded-lg p-2 sm:p-3">
+                  <div className="flex items-start justify-between mb-1 sm:mb-2">
+                    <h5 className="font-medium text-xs sm:text-sm text-gray-800 truncate">{module.title}</h5>
+                    <span className="text-xs text-gray-500 flex-shrink-0 ml-2">{module.duration} min</span>
                   </div>
-                  <p className="text-xs text-gray-600 mb-2 line-clamp-2">{module.content}</p>
+                  <p className="text-xs text-gray-600 mb-1 sm:mb-2 line-clamp-2">{module.content}</p>
                   {module.keyPoints && module.keyPoints.length > 0 && (
                     <div className="text-xs text-gray-500">
                       <span className="font-medium">Key Points:</span>
@@ -141,11 +143,11 @@ const CourseCard: React.FC<CourseCardProps> = ({
       )}
       
       <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <span className="text-sm text-gray-600">{getStatusText(status)}</span>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
+          <span className="text-xs sm:text-sm text-gray-600">{getStatusText(status)}</span>
           <button
             onClick={() => onStartSession(course)}
-            className={`flex items-center space-x-2 px-4 py-2 rounded-lg ${
+            className={`flex items-center justify-center space-x-1 sm:space-x-2 px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm ${
               status === 'completed' 
                 ? 'bg-blue-500 hover:bg-blue-600' 
                 : status === 'in-progress'
@@ -153,16 +155,16 @@ const CourseCard: React.FC<CourseCardProps> = ({
                   : 'bg-green-500 hover:bg-green-600'
             } text-white`}
           >
-            <Play className="h-4 w-4" />
+            <Play className="h-3 w-3 sm:h-4 sm:w-4" />
             <span>{getButtonText(status)}</span>
           </button>
         </div>
         
         {showAdminActions && user.role === 'Admin' && onTestCourse && onAssignCourse && (
-          <div className="flex space-x-2 pt-2">
+          <div className="flex flex-wrap gap-1 sm:gap-2 pt-2">
             <button
               onClick={() => onTestCourse(course)}
-              className="flex items-center space-x-1 px-3 py-1 bg-blue-100 text-blue-700 rounded text-sm hover:bg-blue-200"
+              className="flex items-center space-x-1 px-2 sm:px-3 py-1 bg-blue-100 text-blue-700 rounded text-xs sm:text-sm hover:bg-blue-200"
             >
               <TestTube className="h-3 w-3" />
               <span>Test</span>
@@ -171,7 +173,7 @@ const CourseCard: React.FC<CourseCardProps> = ({
             {onEditCourse && (
               <button
                 onClick={() => onEditCourse(course)}
-                className="flex items-center space-x-1 px-3 py-1 bg-green-100 text-green-700 rounded text-sm hover:bg-green-200"
+                className="flex items-center space-x-1 px-2 sm:px-3 py-1 bg-green-100 text-green-700 rounded text-xs sm:text-sm hover:bg-green-200"
               >
                 <Edit3 className="h-3 w-3" />
                 <span>Edit</span>
@@ -183,7 +185,7 @@ const CourseCard: React.FC<CourseCardProps> = ({
                 onClick={() => onAssignCourse(course)}
                 onMouseEnter={() => user.plan === 'Free' && onAssignHover && onAssignHover(course.id)}
                 onMouseLeave={() => onAssignHover && onAssignHover(null)}
-                className={`flex items-center space-x-1 px-3 py-1 rounded text-sm ${
+                className={`flex items-center space-x-1 px-2 sm:px-3 py-1 rounded text-xs sm:text-sm ${
                   user.plan === 'Free' 
                     ? 'bg-gray-100 text-gray-500 cursor-not-allowed' 
                     : 'bg-purple-100 text-purple-700 hover:bg-purple-200'

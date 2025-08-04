@@ -9,10 +9,10 @@ interface StandardDashboardProps {
 
 const StandardDashboard: React.FC<StandardDashboardProps> = ({ assignedCourses, performance }) => {
   return (
-    <div className="p-8">
+    <div className="p-6 lg:p-8">
       <h2 className="text-3xl font-bold text-gray-900 mb-8">My Dashboard</h2>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <div className="bg-white rounded-lg p-6 shadow-sm border">
           <h3 className="text-xl font-semibold mb-4">Assigned Courses</h3>
           {assignedCourses.length === 0 ? (
@@ -23,7 +23,7 @@ const StandardDashboard: React.FC<StandardDashboardProps> = ({ assignedCourses, 
                 <div key={course.id} className="p-4 bg-gray-50 rounded-lg">
                   <div className="font-medium">{course.course_title}</div>
                   <div className="text-sm text-gray-500">{course.track_type}</div>
-                  <div className="text-xs text-blue-600 mt-2">
+                  <div className="text-sm text-blue-600 mt-2">
                     View in "My Courses" to start learning
                   </div>
                 </div>
@@ -41,8 +41,8 @@ const StandardDashboard: React.FC<StandardDashboardProps> = ({ assignedCourses, 
               {performance.map((perf: any) => (
                 <div key={perf.id} className="p-4 bg-gray-50 rounded-lg">
                   <div className="flex items-center justify-between mb-2">
-                    <div className="font-medium">{perf.courses?.course_title}</div>
-                    <div className="text-green-600 font-semibold">{perf.progress || 0}%</div>
+                    <div className="font-medium truncate">{perf.courses?.course_title}</div>
+                    <div className="text-green-600 font-semibold ml-4">{perf.progress || 0}%</div>
                   </div>
                   <div className="w-full bg-gray-200 rounded-full h-2">
                     <div 

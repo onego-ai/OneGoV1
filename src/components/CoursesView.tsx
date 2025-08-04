@@ -47,7 +47,7 @@ const CoursesView: React.FC<CoursesViewProps> = ({ user, onStartSession }) => {
       console.log('Loading courses for user:', user.id);
       
       // Load individually assigned courses - only show published courses
-      const { data: assignedData, error: assignedError } = await supabase
+      const { data: assignedData, error: assignedError } = await (supabase as any)
         .from('individual_course_assignments')
         .select(`
           *,
@@ -162,7 +162,7 @@ const CoursesView: React.FC<CoursesViewProps> = ({ user, onStartSession }) => {
 
   if (loading) {
     return (
-      <div className="p-8 flex items-center justify-center">
+      <div className="p-4 sm:p-6 lg:p-8 flex items-center justify-center">
         <div className="text-gray-500">Loading courses...</div>
       </div>
     );
@@ -192,16 +192,16 @@ const CoursesView: React.FC<CoursesViewProps> = ({ user, onStartSession }) => {
   });
 
   return (
-    <div className="p-8">
-      <h2 className="text-3xl font-bold text-gray-900 mb-8">My Courses</h2>
+    <div className="p-4 sm:p-6 lg:p-8">
+      <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-6 sm:mb-8">My Courses</h2>
       
       {assignedCourses.length === 0 ? (
-        <div className="text-center py-12">
-          <div className="text-gray-500 mb-4">No courses assigned yet.</div>
-          <div className="text-sm text-gray-400">Your administrator will assign courses to you.</div>
+        <div className="text-center py-8 sm:py-12">
+          <div className="text-gray-500 mb-4 text-sm sm:text-base">No courses assigned yet.</div>
+          <div className="text-xs sm:text-sm text-gray-400">Your administrator will assign courses to you.</div>
         </div>
       ) : (
-        <div className="space-y-6">
+        <div className="space-y-4 sm:space-y-6">
           <AssignedCoursesSection
             title="Not Started"
             courses={notStartedCourses}

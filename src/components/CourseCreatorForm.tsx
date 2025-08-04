@@ -234,14 +234,14 @@ Keep sessions focused and within the specified duration. Make learning enjoyable
   };
 
   return (
-    <div className="max-w-4xl mx-auto">
+    <div className="max-w-4xl mx-auto p-4 sm:p-6">
       {!canCreateCourse && (
-        <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+        <div className="mb-4 sm:mb-6 p-3 sm:p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
           <div className="flex items-center space-x-2">
-            <Clock className="h-5 w-5 text-yellow-600" />
+            <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-600 flex-shrink-0" />
             <div>
-              <p className="text-yellow-800 font-medium">Daily Limit Reached</p>
-              <p className="text-yellow-700 text-sm">
+              <p className="text-yellow-800 font-medium text-sm sm:text-base">Daily Limit Reached</p>
+              <p className="text-yellow-700 text-xs sm:text-sm">
                 You've created {coursesCreatedToday}/1 courses today. Free plan users can create 1 course per day.
               </p>
             </div>
@@ -249,37 +249,37 @@ Keep sessions focused and within the specified duration. Make learning enjoyable
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-8">
+      <form onSubmit={handleSubmit} className="space-y-6 sm:space-y-8">
         {/* Course Title */}
-        <div className="bg-white rounded-lg p-6 shadow-sm border">
-          <div className="flex items-center space-x-3 mb-4">
-            <BookOpen className="h-6 w-6 text-green-500" />
-            <h3 className="text-lg font-semibold text-gray-900">Course Details</h3>
+        <div className="bg-white rounded-lg p-4 sm:p-6 shadow-sm border">
+          <div className="flex items-center space-x-2 sm:space-x-3 mb-3 sm:mb-4">
+            <BookOpen className="h-5 w-5 sm:h-6 sm:w-6 text-green-500" />
+            <h3 className="text-base sm:text-lg font-semibold text-gray-900">Course Details</h3>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
                 Course Title *
               </label>
               <input
                 type="text"
                 value={formData.courseTitle}
                 onChange={(e) => setFormData(prev => ({ ...prev, courseTitle: e.target.value }))}
-                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                className="w-full p-2 sm:p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm sm:text-base touch-target"
                 placeholder="e.g., Advanced Leadership Skills"
                 required
               />
             </div>
             
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
                 Track Type *
               </label>
               <select
                 value={formData.trackType}
                 onChange={(e) => setFormData(prev => ({ ...prev, trackType: e.target.value }))}
-                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                className="w-full p-2 sm:p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm sm:text-base touch-target"
               >
                 <option value="Corporate">Corporate Training</option>
                 <option value="Educational">Educational</option>
@@ -289,21 +289,21 @@ Keep sessions focused and within the specified duration. Make learning enjoyable
         </div>
 
         {/* Course Settings */}
-        <div className="bg-white rounded-lg p-6 shadow-sm border">
-          <div className="flex items-center space-x-3 mb-4">
-            <Target className="h-6 w-6 text-blue-500" />
-            <h3 className="text-lg font-semibold text-gray-900">Course Settings</h3>
+        <div className="bg-white rounded-lg p-4 sm:p-6 shadow-sm border">
+          <div className="flex items-center space-x-2 sm:space-x-3 mb-3 sm:mb-4">
+            <Target className="h-5 w-5 sm:h-6 sm:w-6 text-blue-500" />
+            <h3 className="text-base sm:text-lg font-semibold text-gray-900">Course Settings</h3>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
                 Duration (minutes) *
               </label>
               <select
                 value={formData.duration}
                 onChange={(e) => setFormData(prev => ({ ...prev, duration: e.target.value }))}
-                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                className="w-full p-2 sm:p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm sm:text-base touch-target"
               >
                 <option value="15">15 minutes</option>
                 <option value="30">30 minutes</option>
@@ -315,13 +315,13 @@ Keep sessions focused and within the specified duration. Make learning enjoyable
             </div>
             
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
                 Difficulty Level *
               </label>
               <select
                 value={formData.difficulty}
                 onChange={(e) => setFormData(prev => ({ ...prev, difficulty: e.target.value }))}
-                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                className="w-full p-2 sm:p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm sm:text-base touch-target"
               >
                 <option value="Beginner">Beginner</option>
                 <option value="Intermediate">Intermediate</option>
@@ -332,21 +332,21 @@ Keep sessions focused and within the specified duration. Make learning enjoyable
         </div>
 
         {/* Learning Content */}
-        <div className="bg-white rounded-lg p-6 shadow-sm border">
-          <div className="flex items-center space-x-3 mb-4">
-            <Zap className="h-6 w-6 text-purple-500" />
-            <h3 className="text-lg font-semibold text-gray-900">Learning Content</h3>
+        <div className="bg-white rounded-lg p-4 sm:p-6 shadow-sm border">
+          <div className="flex items-center space-x-2 sm:space-x-3 mb-3 sm:mb-4">
+            <Zap className="h-5 w-5 sm:h-6 sm:w-6 text-purple-500" />
+            <h3 className="text-base sm:text-lg font-semibold text-gray-900">Learning Content</h3>
           </div>
           
-          <div className="space-y-6">
+          <div className="space-y-4 sm:space-y-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
                 Learning Objectives *
               </label>
               <textarea
                 value={formData.objectives}
                 onChange={(e) => setFormData(prev => ({ ...prev, objectives: e.target.value }))}
-                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                className="w-full p-2 sm:p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm sm:text-base"
                 rows={4}
                 placeholder="Enter each objective on a new line:&#10;• Understand key leadership principles&#10;• Develop communication skills&#10;• Practice decision-making scenarios"
                 required
@@ -354,13 +354,13 @@ Keep sessions focused and within the specified duration. Make learning enjoyable
             </div>
             
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
                 Key Topics to Cover *
               </label>
               <textarea
                 value={formData.topics}
                 onChange={(e) => setFormData(prev => ({ ...prev, topics: e.target.value }))}
-                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                className="w-full p-2 sm:p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm sm:text-base"
                 rows={4}
                 placeholder="Enter each topic on a new line:&#10;Communication Strategies&#10;Team Building&#10;Conflict Resolution&#10;Performance Management"
                 required
@@ -368,13 +368,13 @@ Keep sessions focused and within the specified duration. Make learning enjoyable
             </div>
             
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
                 Special Instructions (Optional)
               </label>
               <textarea
                 value={formData.specialInstructions}
                 onChange={(e) => setFormData(prev => ({ ...prev, specialInstructions: e.target.value }))}
-                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                className="w-full p-2 sm:p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm sm:text-base"
                 rows={3}
                 placeholder="Any specific requirements, teaching methods, or focus areas..."
               />
@@ -387,7 +387,7 @@ Keep sessions focused and within the specified duration. Make learning enjoyable
           <button
             type="submit"
             disabled={loading || !canCreateCourse}
-            className={`flex items-center space-x-2 px-8 py-3 rounded-lg font-medium transition-colors ${
+            className={`flex items-center justify-center space-x-2 px-6 sm:px-8 py-2 sm:py-3 rounded-lg font-medium text-sm sm:text-base transition-colors touch-target ${
               loading || !canCreateCourse
                 ? 'bg-gray-400 text-gray-700 cursor-not-allowed'
                 : 'bg-green-500 text-white hover:bg-green-600'

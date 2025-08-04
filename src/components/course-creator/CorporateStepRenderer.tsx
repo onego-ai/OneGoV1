@@ -198,19 +198,19 @@ const CorporateStepRenderer: React.FC<CorporateStepRendererProps> = ({
   switch (currentStep) {
     case 1:
       return (
-        <div className="space-y-6">
+        <div className="space-y-4 sm:space-y-6">
           <div>
-            <h3 className="text-xl font-semibold mb-4">📝 Describe Your Course</h3>
-            <p className="text-gray-600 mb-4">
+            <h3 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4">📝 Describe Your Course</h3>
+            <p className="text-sm sm:text-base text-gray-600 mb-3 sm:mb-4">
               Tell us what you want to teach. Be as detailed as possible about the topic, goals, and what learners should achieve.
             </p>
             <textarea
               value={formData.courseDescription || ''}
               onChange={(e) => setFormData({ ...formData, courseDescription: e.target.value })}
               placeholder="Example: I want to create a course on customer service skills for retail employees. The course should cover handling difficult customers, de-escalation techniques, and building customer relationships. Learners should be able to confidently handle customer complaints and improve customer satisfaction scores."
-              className="w-full h-32 p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent resize-none"
+              className="w-full h-24 sm:h-32 p-3 sm:p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent resize-none text-sm sm:text-base"
             />
-            <div className="mt-2 text-sm text-gray-500">
+            <div className="mt-2 text-xs sm:text-sm text-gray-500">
               {formData.courseDescription?.length || 0} characters
             </div>
           </div>
@@ -219,19 +219,19 @@ const CorporateStepRenderer: React.FC<CorporateStepRendererProps> = ({
 
     case 2:
       return (
-        <div className="space-y-6">
+        <div className="space-y-4 sm:space-y-6">
           <div>
-            <h3 className="text-xl font-semibold mb-4">👥 Describe Your Learner</h3>
-            <p className="text-gray-600 mb-4">
+            <h3 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4">👥 Describe Your Learner</h3>
+            <p className="text-sm sm:text-base text-gray-600 mb-3 sm:mb-4">
               Who will be taking this course? Describe their background, experience level, and what they need to learn.
             </p>
             <textarea
               value={formData.learnerDescription || ''}
               onChange={(e) => setFormData({ ...formData, learnerDescription: e.target.value })}
               placeholder="Example: The learners are retail store employees aged 18-45, mostly entry-level with limited customer service experience. They need to learn how to handle customer complaints professionally, understand company policies, and improve their communication skills. Some may be nervous about dealing with angry customers."
-              className="w-full h-32 p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent resize-none"
+              className="w-full h-24 sm:h-32 p-3 sm:p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent resize-none text-sm sm:text-base"
             />
-            <div className="mt-2 text-sm text-gray-500">
+            <div className="mt-2 text-xs sm:text-sm text-gray-500">
               {formData.learnerDescription?.length || 0} characters
             </div>
           </div>
@@ -240,20 +240,20 @@ const CorporateStepRenderer: React.FC<CorporateStepRendererProps> = ({
 
     case 3:
       return (
-        <div className="space-y-6">
+        <div className="space-y-4 sm:space-y-6">
           <div>
-            <h3 className="text-xl font-semibold mb-4">📊 Course Structure</h3>
-            <p className="text-gray-600 mb-6">
+            <h3 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4">📊 Course Structure</h3>
+            <p className="text-sm sm:text-base text-gray-600 mb-4 sm:mb-6">
               Choose how you want your course structured. We'll automatically generate the appropriate number of sections and topics.
             </p>
             
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="space-y-4">
-                <label className="block text-sm font-medium text-gray-700 flex items-center">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+              <div className="space-y-3 sm:space-y-4">
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 flex items-center">
                   Number of Topics
                   {!isProUser && (
                     <div className="flex items-center space-x-1 text-yellow-600 ml-2">
-                      <Crown className="h-4 w-4" />
+                      <Crown className="h-3 w-3 sm:h-4 sm:w-4" />
                       <span className="text-xs font-medium">Pro+</span>
                     </div>
                   )}
@@ -266,7 +266,7 @@ const CorporateStepRenderer: React.FC<CorporateStepRendererProps> = ({
                     }
                   }}
                   disabled={!isProUser}
-                  className={`w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 ${
+                  className={`w-full p-2 sm:p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 text-sm sm:text-base touch-target ${
                     !isProUser ? 'bg-gray-100 cursor-not-allowed' : ''
                   }`}
                 >
@@ -284,12 +284,12 @@ const CorporateStepRenderer: React.FC<CorporateStepRendererProps> = ({
                 )}
               </div>
 
-              <div className="space-y-4">
-                <label className="block text-sm font-medium text-gray-700 flex items-center">
+              <div className="space-y-3 sm:space-y-4">
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 flex items-center">
                   Number of Quizzes
                   {!isProUser && (
                     <div className="flex items-center space-x-1 text-yellow-600 ml-2">
-                      <Crown className="h-4 w-4" />
+                      <Crown className="h-3 w-3 sm:h-4 sm:w-4" />
                       <span className="text-xs font-medium">Pro+</span>
                     </div>
                   )}
@@ -302,7 +302,7 @@ const CorporateStepRenderer: React.FC<CorporateStepRendererProps> = ({
                     }
                   }}
                   disabled={!isProUser}
-                  className={`w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 ${
+                  className={`w-full p-2 sm:p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 text-sm sm:text-base touch-target ${
                     !isProUser ? 'bg-gray-100 cursor-not-allowed' : ''
                   }`}
                 >
@@ -319,12 +319,12 @@ const CorporateStepRenderer: React.FC<CorporateStepRendererProps> = ({
                 )}
               </div>
 
-              <div className="space-y-4">
-                <label className="block text-sm font-medium text-gray-700 flex items-center">
+              <div className="space-y-3 sm:space-y-4">
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 flex items-center">
                   Course Duration
                   {!isProUser && (
                     <div className="flex items-center space-x-1 text-yellow-600 ml-2">
-                      <Crown className="h-4 w-4" />
+                      <Crown className="h-3 w-3 sm:h-4 sm:w-4" />
                       <span className="text-xs font-medium">Pro+</span>
                     </div>
                   )}
@@ -337,7 +337,7 @@ const CorporateStepRenderer: React.FC<CorporateStepRendererProps> = ({
                     }
                   }}
                   disabled={!isProUser}
-                  className={`w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 ${
+                  className={`w-full p-2 sm:p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 text-sm sm:text-base touch-target ${
                     !isProUser ? 'bg-gray-100 cursor-not-allowed' : ''
                   }`}
                 >
@@ -356,9 +356,9 @@ const CorporateStepRenderer: React.FC<CorporateStepRendererProps> = ({
               </div>
             </div>
 
-            <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-              <h4 className="font-medium text-blue-800 mb-2">Course Preview</h4>
-              <p className="text-sm text-blue-700">
+            <div className="mt-4 sm:mt-6 p-3 sm:p-4 bg-blue-50 rounded-lg">
+              <h4 className="font-medium text-blue-800 mb-2 text-sm sm:text-base">Course Preview</h4>
+              <p className="text-xs sm:text-sm text-blue-700">
                 Your course will have <strong>{formData.numberOfTopics || 3} main topics</strong> with{' '}
                 <strong>{formData.numberOfQuizzes || 1} knowledge checks</strong> and take approximately{' '}
                 <strong>{formData.duration || 30} minutes</strong> to complete.
@@ -366,8 +366,8 @@ const CorporateStepRenderer: React.FC<CorporateStepRendererProps> = ({
               {!isProUser && (
                 <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
                   <div className="flex items-center space-x-2">
-                    <Crown className="h-4 w-4 text-yellow-600" />
-                    <span className="text-sm text-yellow-800 font-medium">
+                    <Crown className="h-4 w-4 text-yellow-600 flex-shrink-0" />
+                    <span className="text-xs sm:text-sm text-yellow-800 font-medium">
                       Pro Feature: Upgrade to customize course structure
                     </span>
                   </div>
@@ -380,22 +380,22 @@ const CorporateStepRenderer: React.FC<CorporateStepRendererProps> = ({
 
     case 4:
       return (
-        <div className="space-y-6">
+        <div className="space-y-4 sm:space-y-6">
           <div>
-            <h3 className="text-xl font-semibold mb-4">📄 Additional Content (Optional)</h3>
-            <p className="text-gray-600 mb-6">
+            <h3 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4">📄 Additional Content (Optional)</h3>
+            <p className="text-sm sm:text-base text-gray-600 mb-4 sm:mb-6">
               Upload a PDF document or extract content from a website to enhance your course with additional materials.
             </p>
             
             {/* PDF Upload Section */}
-            <div className="mb-8">
-              <h4 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
-                <FileText className="h-5 w-5 mr-2 text-blue-500" />
+            <div className="mb-6 sm:mb-8">
+              <h4 className="text-base sm:text-lg font-medium text-gray-900 mb-3 sm:mb-4 flex items-center">
+                <FileText className="h-4 w-4 sm:h-5 sm:w-5 mr-2 text-blue-500" />
                 PDF Document Upload
               </h4>
               
               {!uploadedFile ? (
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-green-500 transition-colors">
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 sm:p-8 text-center hover:border-green-500 transition-colors">
                   <input
                     type="file"
                     accept=".pdf"
@@ -403,154 +403,104 @@ const CorporateStepRenderer: React.FC<CorporateStepRendererProps> = ({
                     className="hidden"
                     id="pdf-upload"
                   />
-                  <label htmlFor="pdf-upload" className="cursor-pointer">
-                    <Upload className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-                    <p className="text-lg font-medium text-gray-700 mb-2">
-                      Upload PDF Document
+                  <label
+                    htmlFor="pdf-upload"
+                    className="cursor-pointer block"
+                  >
+                    <Upload className="h-8 w-8 sm:h-12 sm:w-12 text-gray-400 mx-auto mb-2 sm:mb-4" />
+                    <p className="text-sm sm:text-base text-gray-600 mb-1 sm:mb-2">
+                      <span className="font-medium text-green-600">Click to upload</span> or drag and drop
                     </p>
-                    <p className="text-sm text-gray-500">
-                      Click to select a PDF file or drag and drop
-                    </p>
-                    <p className="text-xs text-gray-400 mt-2">
-                      Maximum file size: 10MB
-                    </p>
+                    <p className="text-xs sm:text-sm text-gray-500">PDF files only (max 10MB)</p>
                   </label>
                 </div>
               ) : (
-                <div className="border border-green-200 rounded-lg p-4 bg-green-50">
+                <div className="border border-gray-200 rounded-lg p-3 sm:p-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-3">
-                      {isProcessing ? (
-                        <Loader2 className="h-8 w-8 text-green-600 animate-spin" />
-                      ) : (
-                        <FileText className="h-8 w-8 text-green-600" />
-                      )}
+                      <FileText className="h-8 w-8 text-blue-500" />
                       <div>
-                        <p className="font-medium text-green-800">{uploadedFile.name}</p>
-                        <p className="text-sm text-green-600">
-                          {isUploading ? 'Processing...' : 'Content extracted successfully'}
+                        <p className="text-sm sm:text-base font-medium text-gray-900">{uploadedFile.name}</p>
+                        <p className="text-xs sm:text-sm text-gray-500">
+                          {(uploadedFile.size / 1024 / 1024).toFixed(2)} MB
                         </p>
                       </div>
                     </div>
                     <button
                       onClick={removeFile}
-                      className="text-red-500 hover:text-red-700"
+                      className="p-1 text-gray-400 hover:text-red-500 touch-target"
                     >
-                      <X className="h-5 w-5" />
+                      <X className="h-4 w-4" />
                     </button>
                   </div>
-                  {isUploading && (
-                    <div className="mt-3">
-                      <div className="w-full bg-green-200 rounded-full h-2">
-                        <div className="bg-green-600 h-2 rounded-full animate-pulse" style={{ width: '60%' }}></div>
-                      </div>
-                    </div>
-                  )}
                   {isProcessing && (
-                    <div className="mt-3">
-                      <div className="w-full bg-blue-200 rounded-full h-2">
-                        <div className="bg-blue-600 h-2 rounded-full animate-pulse" style={{ width: '60%' }}></div>
-                      </div>
+                    <div className="mt-3 flex items-center space-x-2 text-sm text-blue-600">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <span>Processing PDF...</span>
                     </div>
                   )}
                 </div>
               )}
             </div>
 
-            {/* Website Scraping Section */}
-            <div className="mb-8">
-              <h4 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
-                <Globe className="h-5 w-5 mr-2 text-purple-500" />
+            {/* Website Content Section */}
+            <div>
+              <h4 className="text-base sm:text-lg font-medium text-gray-900 mb-3 sm:mb-4 flex items-center">
+                <Globe className="h-4 w-4 sm:h-5 sm:w-5 mr-2 text-green-500" />
                 Website Content Extraction
               </h4>
               
               {!formData.websiteContent ? (
-                <div className="space-y-4">
-                  <div className="flex space-x-3">
-                    <div className="flex-1">
-                      <input
-                        type="url"
-                        value={websiteUrl}
-                        onChange={(e) => setWebsiteUrl(e.target.value)}
-                        placeholder="https://example.com"
-                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                      />
-                    </div>
-                    <button
-                      onClick={handleWebsiteScraping}
-                      disabled={isScrapingWebsite || !websiteUrl.trim()}
-                      className="px-6 py-3 bg-purple-500 text-white rounded-lg font-medium hover:bg-purple-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
-                    >
-                      {isScrapingWebsite ? (
-                        <>
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                          Extracting...
-                        </>
-                      ) : (
-                        <>
-                          <Link className="h-4 w-4 mr-2" />
-                          Extract Content
-                        </>
-                      )}
-                    </button>
-                  </div>
-                  <p className="text-sm text-gray-500">
-                    Enter a website URL to extract relevant content using AI-powered search and analysis.
-                  </p>
+                <div className="space-y-3 sm:space-y-4">
+                  <input
+                    type="url"
+                    value={websiteUrl}
+                    onChange={(e) => setWebsiteUrl(e.target.value)}
+                    placeholder="https://example.com"
+                    className="w-full p-2 sm:p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 text-sm sm:text-base"
+                  />
+                  <button
+                    onClick={handleWebsiteScraping}
+                    disabled={!isValidUrl(websiteUrl) || isScrapingWebsite}
+                    className={`w-full p-2 sm:p-3 rounded-lg font-medium text-sm sm:text-base touch-target ${
+                      isValidUrl(websiteUrl) && !isScrapingWebsite
+                        ? 'bg-green-500 hover:bg-green-600 text-white'
+                        : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                    }`}
+                  >
+                    {isScrapingWebsite ? (
+                      <div className="flex items-center justify-center space-x-2">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <span>Extracting content...</span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-center space-x-2">
+                        <Link className="h-4 w-4" />
+                        <span>Extract Content</span>
+                      </div>
+                    )}
+                  </button>
                 </div>
               ) : (
-                <div className="border border-purple-200 rounded-lg p-4 bg-purple-50">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-3">
-                      <Globe className="h-8 w-8 text-purple-600" />
-                      <div>
-                        <p className="font-medium text-purple-800">{formData.websiteUrl}</p>
-                        <p className="text-sm text-purple-600">
-                          Content extracted successfully
-                        </p>
-                      </div>
+                <div className="border border-gray-200 rounded-lg p-3 sm:p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center space-x-2">
+                      <Globe className="h-4 w-4 text-green-500" />
+                      <span className="text-sm sm:text-base font-medium text-gray-900">Content extracted</span>
                     </div>
                     <button
                       onClick={removeWebsiteContent}
-                      className="text-red-500 hover:text-red-700"
+                      className="p-1 text-gray-400 hover:text-red-500 touch-target"
                     >
-                      <X className="h-5 w-5" />
+                      <X className="h-4 w-4" />
                     </button>
                   </div>
+                  <p className="text-xs sm:text-sm text-gray-600">
+                    Website content has been successfully extracted and will be included in your course.
+                  </p>
                 </div>
               )}
             </div>
-
-            {/* Content Preview Section */}
-            {(formData.pdfContent || formData.websiteContent) && (
-              <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-                <h4 className="font-medium text-gray-800 mb-3">Extracted Content Preview</h4>
-                <div className="space-y-3">
-                  {formData.pdfContent && (
-                    <div>
-                      <h5 className="text-sm font-medium text-gray-700 mb-1 flex items-center">
-                        <FileText className="h-4 w-4 mr-1" />
-                        PDF Content
-                      </h5>
-                      <p className="text-sm text-gray-600 line-clamp-3">
-                        {formData.pdfContent}
-                      </p>
-                    </div>
-                  )}
-                  {formData.websiteContent && (
-                    <div>
-                      <h5 className="text-sm font-medium text-gray-700 mb-1 flex items-center">
-                        <Globe className="h-4 w-4 mr-1" />
-                        Website Content
-                      </h5>
-                      <p className="text-sm text-gray-600 line-clamp-3">
-                        {formData.websiteContent}
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
           </div>
         </div>
       );

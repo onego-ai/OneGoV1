@@ -65,25 +65,25 @@ const AssignedCoursesSection: React.FC<AssignedCoursesSectionProps> = ({
     <div className={`border rounded-lg overflow-hidden mb-4 ${getBorderColorClass()}`}>
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className={`w-full px-4 py-3 flex items-center justify-between ${getHeaderColorClass()} hover:opacity-90 transition-opacity`}
+        className={`w-full px-3 sm:px-4 py-2 sm:py-3 flex items-center justify-between ${getHeaderColorClass()} hover:opacity-90 transition-opacity`}
       >
         <div className="flex items-center space-x-2">
-          <span className="font-semibold">{title}</span>
-          <span className="bg-white bg-opacity-20 px-2 py-1 rounded-full text-sm">
+          <span className="font-semibold text-sm sm:text-base">{title}</span>
+          <span className="bg-white bg-opacity-20 px-2 py-1 rounded-full text-xs sm:text-sm">
             {courses.length}
           </span>
         </div>
         {isExpanded ? (
-          <ChevronDown className="h-5 w-5" />
+          <ChevronDown className="h-4 w-4 sm:h-5 sm:w-5" />
         ) : (
-          <ChevronRight className="h-5 w-5" />
+          <ChevronRight className="h-4 w-4 sm:h-5 sm:w-5" />
         )}
       </button>
 
       {isExpanded && (
         <div className="bg-white">
           {courses.length === 0 ? (
-            <div className="p-6 text-center text-gray-500">
+            <div className="p-4 sm:p-6 text-center text-gray-500 text-sm sm:text-base">
               No courses in this category yet.
             </div>
           ) : color === 'green' ? (
@@ -108,8 +108,8 @@ const AssignedCoursesSection: React.FC<AssignedCoursesSectionProps> = ({
             </div>
           ) : (
             // Not started and in progress courses use the card view
-            <div className="p-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="p-3 sm:p-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                 {courses.map((course) => {
                   const status = getCourseStatus(course.id);
                   const progress = getCourseProgress(course.id);

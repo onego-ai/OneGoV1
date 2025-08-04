@@ -177,42 +177,68 @@ const TutoringSession: React.FC<TutoringSessionProps> = ({ course, user, onEnd, 
   const inputsDisabled = loading || isSpeaking || isGeneratingVoice;
 
   const updateProgress = async (userInteractionCount: number) => {
-    // More realistic progress calculation - each meaningful interaction is worth more
-    const baseProgressPerInteraction = 10; // Each interaction worth 10%
-    const newProgress = Math.min(userInteractionCount * baseProgressPerInteraction, 100);
-    
-    setProgress(newProgress);
-    setTotalInteractions(userInteractionCount);
-    
-    const isCompleted = newProgress >= 100;
-    
     try {
-      await supabase
+      console.log('Updating progress for user interaction count:', userInteractionCount);
+      
+      // Calculate progress based on interactions (simple linear progression)
+      const baseProgress = Math.min(userInteractionCount * 10, 100); // 10% per interaction, max 100%
+      
+      // Update local state
+      setProgress(baseProgress);
+      setTotalInteractions(userInteractionCount);
+      
+      // Update performance record in database
+      const { data: existingPerformance, error: fetchError } = await supabase
         .from('user_performance')
-        .upsert({
-          user_id: user.id,
-          course_id: course.id,
-          progress: newProgress,
-          total_interactions: userInteractionCount,
-          completed_at: isCompleted ? new Date().toISOString() : null,
-          session_data: { 
-            last_interaction: new Date().toISOString(),
-            company_context: companyName,
-            training_goal: course.course_plan?.goal,
-            completion_status: isCompleted ? 'completed' : 'in_progress',
-            messages: messages.length
-          },
-          updated_at: new Date().toISOString()
-        }, {
-          onConflict: 'user_id,course_id'
-        });
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('course_id', course.id)
+        .single();
 
-      if (isCompleted && newProgress === 100 && progress < 100) {
-        toast({
-          title: "🎉 Congratulations!",
-          description: `You've completed "${course.course_title}"!`,
-          duration: 5000,
-        });
+      if (fetchError && fetchError.code !== 'PGRST116') {
+        console.error('Error fetching existing performance:', fetchError);
+        return;
+      }
+
+      const sessionData = {
+        total_interactions: userInteractionCount,
+        progress: baseProgress,
+        last_activity: new Date().toISOString(),
+        session_duration: calculateSessionDuration()
+      } as any;
+
+      if (existingPerformance) {
+        // Update existing record
+        const { error: updateError } = await supabase
+          .from('user_performance')
+          .update({
+            session_data: sessionData,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', existingPerformance.id);
+
+        if (updateError) {
+          console.error('Error updating performance:', updateError);
+        } else {
+          console.log('Performance updated successfully');
+        }
+      } else {
+        // Create new record
+        const { error: insertError } = await supabase
+          .from('user_performance')
+          .insert({
+            user_id: user.id,
+            course_id: course.id,
+            session_data: sessionData,
+            started_at: sessionStartTime.toISOString(),
+            created_at: new Date().toISOString()
+          });
+
+        if (insertError) {
+          console.error('Error creating performance record:', insertError);
+        } else {
+          console.log('Performance record created successfully');
+        }
       }
     } catch (error) {
       console.error('Error updating progress:', error);
@@ -1236,18 +1262,18 @@ Keep responses between 40-100 words. Be engaging and use **bold** for key points
   return (
     <div className="flex flex-col h-screen bg-gray-50">
       {/* Header - Mobile Optimized */}
-      <div className="bg-white border-b px-4 md:px-6 py-3 md:py-4 flex items-center justify-between">
-        <div className="flex-1 min-w-0 mr-4">
-          <h1 className="text-lg md:text-xl font-semibold text-gray-900 truncate">
+      <div className="bg-white border-b px-3 sm:px-4 md:px-6 py-2 sm:py-3 md:py-4 flex items-center justify-between">
+        <div className="flex-1 min-w-0 mr-2 sm:mr-4">
+          <h1 className="text-base sm:text-lg md:text-xl font-semibold text-gray-900 truncate">
             {course.course_title}
           </h1>
-          <div className="mt-2 bg-gray-200 rounded-full h-2">
+          <div className="mt-1 sm:mt-2 bg-gray-200 rounded-full h-1.5 sm:h-2">
             <div 
-              className="bg-green-500 h-2 rounded-full transition-all duration-300"
+              className="bg-green-500 h-1.5 sm:h-2 rounded-full transition-all duration-300"
               style={{ width: `${progress}%` }}
             />
           </div>
-          <p className="text-xs md:text-sm text-gray-600 mt-1">
+          <p className="text-xs sm:text-sm text-gray-600 mt-1">
             {progress}% Complete • {totalInteractions} interactions
           </p>
         </div>
@@ -1255,36 +1281,36 @@ Keep responses between 40-100 words. Be engaging and use **bold** for key points
         {/* Debug button - remove in production */}
         <button
           onClick={testChatFunction}
-          className="px-3 py-1 text-xs bg-yellow-500 text-white rounded hover:bg-yellow-600"
+          className="px-2 sm:px-3 py-1 text-xs bg-yellow-500 text-white rounded hover:bg-yellow-600"
           title="Test chat function"
         >
           Test Chat
         </button>
         
-        <div className="flex items-center space-x-1 md:space-x-2 flex-shrink-0">
+        <div className="flex items-center space-x-1 sm:space-x-2 flex-shrink-0">
           {/* Mode Toggle */}
           <div className="flex bg-gray-100 rounded-lg p-1">
             <button
               onClick={() => setMode('chat')}
-              className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
+              className={`px-2 sm:px-3 py-1 rounded-md text-xs sm:text-sm font-medium transition-colors ${
                 mode === 'chat'
                   ? 'bg-white text-gray-900 shadow-sm'
                   : 'text-gray-600 hover:text-gray-900'
               }`}
             >
-              <MessageCircle className="h-4 w-4 inline mr-1" />
-              Chat
+              <MessageCircle className="h-3 w-3 sm:h-4 sm:w-4 inline mr-1" />
+              <span className="hidden sm:inline">Chat</span>
             </button>
             <button
               onClick={() => setMode('reading')}
-              className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
+              className={`px-2 sm:px-3 py-1 rounded-md text-xs sm:text-sm font-medium transition-colors ${
                 mode === 'reading'
                   ? 'bg-white text-gray-900 shadow-sm'
                   : 'text-gray-600 hover:text-gray-900'
               }`}
             >
-              <BookOpen className="h-4 w-4 inline mr-1" />
-              Read
+              <BookOpen className="h-3 w-3 sm:h-4 sm:w-4 inline mr-1" />
+              <span className="hidden sm:inline">Read</span>
             </button>
           </div>
           
@@ -1296,7 +1322,7 @@ Keep responses between 40-100 words. Be engaging and use **bold** for key points
           
           <button
             onClick={handleAudioToggle}
-            className={`p-2 rounded-full ${
+            className={`p-1.5 sm:p-2 rounded-full ${
               audioEnabled && !isMuted 
                 ? 'bg-green-100 text-green-600' 
                 : 'bg-gray-100 text-gray-600'
@@ -1309,31 +1335,31 @@ Keep responses between 40-100 words. Be engaging and use **bold** for key points
                   : 'Audio enabled'
             }
           >
-            {audioEnabled && !isMuted ? <Volume2 className="h-4 w-4 md:h-5 md:w-5" /> : <VolumeX className="h-4 w-4 md:h-5 md:w-5" />}
+            {audioEnabled && !isMuted ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
           </button>
           
           <button
             onClick={resetSession}
-            className="p-2 rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200"
+            className="p-1.5 sm:p-2 rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200"
           >
-            <RotateCcw className="h-4 w-4 md:h-5 md:w-5" />
+            <RotateCcw className="h-4 w-4" />
           </button>
           
           <button
             onClick={endSession}
-            className="p-2 rounded-full bg-red-100 text-red-600 hover:bg-red-200"
+            className="p-1.5 sm:p-2 rounded-full bg-red-100 text-red-600 hover:bg-red-200"
           >
-            <X className="h-4 w-4 md:h-5 md:w-5" />
+            <X className="h-4 w-4" />
           </button>
         </div>
       </div>
 
       {/* iOS Audio Status Banner */}
       {isIOSDevice && (showManualPlayButton || audioRequiresUserInteraction) && (
-        <div className="bg-blue-50 border-b border-blue-200 px-4 py-3">
+        <div className="bg-blue-50 border-b border-blue-200 px-3 sm:px-4 py-2 sm:py-3">
           <div className="flex items-center justify-between">
             <div className="flex-1">
-              <p className="text-blue-800 text-sm">
+              <p className="text-blue-800 text-xs sm:text-sm">
                 {audioRequiresUserInteraction 
                   ? "Tap to enable audio playback" 
                   : "Audio ready - tap to play current message"
@@ -1345,9 +1371,9 @@ Keep responses between 40-100 words. Be engaging and use **bold** for key points
             </div>
             <button
               onClick={handleManualAudioPlay}
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm flex items-center space-x-2"
+              className="bg-blue-600 text-white px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm flex items-center space-x-1 sm:space-x-2"
             >
-              <Play className="h-4 w-4" />
+              <Play className="h-3 w-3 sm:h-4 sm:w-4" />
               <span>Play Audio</span>
             </button>
           </div>
@@ -1356,18 +1382,18 @@ Keep responses between 40-100 words. Be engaging and use **bold** for key points
 
       {/* Microphone Permission Banner */}
       {isMobileDevice && microphonePermission === false && (
-        <div className="bg-orange-50 border-b border-orange-200 px-4 py-3">
-          <p className="text-orange-800 text-sm">
+        <div className="bg-orange-50 border-b border-orange-200 px-3 sm:px-4 py-2 sm:py-3">
+          <p className="text-orange-800 text-xs sm:text-sm">
             Microphone access is required for voice input. Please enable it in your browser settings and refresh the page.
           </p>
         </div>
       )}
 
       {/* Messages Container */}
-      <div className="flex-1 overflow-y-auto p-6 space-y-4">
+      <div className="flex-1 overflow-y-auto p-3 sm:p-4 md:p-6 space-y-3 sm:space-y-4">
         {messages.length === 0 && (
-          <div className="text-center text-gray-500 mt-10">
-            <p>Starting your session...</p>
+          <div className="text-center text-gray-500 mt-8 sm:mt-10">
+            <p className="text-sm sm:text-base">Starting your session...</p>
           </div>
         )}
         
@@ -1377,7 +1403,7 @@ Keep responses between 40-100 words. Be engaging and use **bold** for key points
             className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
           >
             <div
-              className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
+              className={`max-w-[85%] sm:max-w-xs lg:max-w-md px-3 sm:px-4 py-2 rounded-lg ${
                 message.role === 'user'
                   ? 'bg-green-500 text-white'
                   : 'bg-white text-gray-900 border'
@@ -1385,7 +1411,7 @@ Keep responses between 40-100 words. Be engaging and use **bold** for key points
             >
               {message.role === 'assistant' && (
                 <div className="flex items-center mb-2">
-                  <div className="w-16 h-16 rounded-full overflow-hidden mr-3">
+                  <div className="w-8 h-8 sm:w-12 sm:h-12 md:w-16 md:h-16 rounded-full overflow-hidden mr-2 sm:mr-3">
                     <img 
                       src={isNia ? "/lovable-uploads/1ea99c8a-1f92-4867-8dd3-dcdadc7cdd90.png" : "/lovable-uploads/dd6e7370-e1f2-4c57-87f4-d82781703687.png"} 
                       alt={tutorPersona}
@@ -1393,17 +1419,17 @@ Keep responses between 40-100 words. Be engaging and use **bold** for key points
                     />
                   </div>
                   <div className="flex items-center">
-                    <span className="text-sm font-medium mr-2">{tutorPersona}</span>
+                    <span className="text-xs sm:text-sm font-medium mr-1 sm:mr-2">{tutorPersona}</span>
                     {index === streamingMessageIndex && isGeneratingVoice && (
                       <div className="flex items-center text-xs text-blue-500">
-                        <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse mr-1"></div>
-                        Thinking...
+                        <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-blue-400 rounded-full animate-pulse mr-1"></div>
+                        <span className="hidden sm:inline">Thinking...</span>
                       </div>
                     )}
                     {index === streamingMessageIndex && isSpeaking && !isGeneratingVoice && (
                       <div className="flex items-center text-xs text-green-600">
-                        <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse mr-1"></div>
-                        Speaking...
+                        <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-green-400 rounded-full animate-pulse mr-1"></div>
+                        <span className="hidden sm:inline">Speaking...</span>
                       </div>
                     )}
                   </div>
@@ -1412,13 +1438,13 @@ Keep responses between 40-100 words. Be engaging and use **bold** for key points
               
               {message.role === 'assistant' && index === streamingMessageIndex && isGeneratingVoice && audioEnabled ? (
                 <div className="flex space-x-1">
-                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                  <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-gray-400 rounded-full animate-bounce"></div>
+                  <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                  <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
                 </div>
               ) : (
                 <div
-                  className={`whitespace-pre-line ${canClickToReveal && index === streamingMessageIndex ? 'cursor-pointer' : ''}`}
+                  className={`whitespace-pre-line text-sm sm:text-base ${canClickToReveal && index === streamingMessageIndex ? 'cursor-pointer' : ''}`}
                   onClick={() => handleTextClick(index, message.content)}
                   dangerouslySetInnerHTML={{
                     __html: (() => {
@@ -1447,9 +1473,9 @@ Keep responses between 40-100 words. Be engaging and use **bold** for key points
         
         {loading && (
           <div className="flex justify-start">
-            <div className="bg-white text-gray-900 border px-4 py-2 rounded-lg">
+            <div className="bg-white text-gray-900 border px-3 sm:px-4 py-2 rounded-lg">
               <div className="flex items-center">
-                <div className="w-16 h-16 rounded-full overflow-hidden mr-3">
+                <div className="w-8 h-8 sm:w-12 sm:h-12 md:w-16 md:h-16 rounded-full overflow-hidden mr-2 sm:mr-3">
                   <img 
                     src={isNia ? "/lovable-uploads/1ea99c8a-1f92-4867-8dd3-dcdadc7cdd90.png" : "/lovable-uploads/dd6e7370-e1f2-4c57-87f4-d82781703687.png"} 
                     alt={tutorPersona}
@@ -1457,9 +1483,9 @@ Keep responses between 40-100 words. Be engaging and use **bold** for key points
                   />
                 </div>
                 <div className="flex space-x-1">
-                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                  <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-gray-400 rounded-full animate-bounce"></div>
+                  <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                  <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
                 </div>
               </div>
             </div>
@@ -1470,22 +1496,22 @@ Keep responses between 40-100 words. Be engaging and use **bold** for key points
       </div>
 
       {/* Input Area */}
-      <div className="bg-white border-t p-4">
+      <div className="bg-white border-t p-3 sm:p-4">
         <div className="flex items-center space-x-2">
           <div className="relative">
             <button
               onClick={handleMicClick}
               disabled={inputsDisabled || (isMobileDevice && microphonePermission === false)}
-              className={`p-3 rounded-full transition-colors ${
+              className={`p-2.5 sm:p-3 rounded-full transition-colors ${
                 isRecording 
                   ? 'bg-red-500 text-white hover:bg-red-600' 
                   : 'bg-green-500 text-white hover:bg-green-600'
               } disabled:opacity-50 disabled:cursor-not-allowed`}
             >
-              {isRecording ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
+              {isRecording ? <MicOff className="h-4 w-4 sm:h-5 sm:w-5" /> : <Mic className="h-4 w-4 sm:h-5 sm:w-5" />}
             </button>
             {isRecording && (
-              <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-red-500 text-white text-xs px-2 py-1 rounded whitespace-nowrap">
+              <div className="absolute -top-6 sm:-top-8 left-1/2 transform -translate-x-1/2 bg-red-500 text-white text-xs px-2 py-1 rounded whitespace-nowrap">
                 {isMobileDevice ? "Tap to Stop" : "Click to Stop"}
               </div>
             )}
@@ -1506,13 +1532,13 @@ Keep responses between 40-100 words. Be engaging and use **bold** for key points
                   : "Type your message or click the microphone..."
             }
             disabled={inputsDisabled}
-            className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex-1 px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
           />
           
           <button
             onClick={() => sendMessage(inputMessage)}
             disabled={inputsDisabled || !inputMessage.trim()}
-            className="px-6 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+            className="px-4 sm:px-6 py-2 sm:py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed font-medium text-sm sm:text-base"
           >
             Send
           </button>

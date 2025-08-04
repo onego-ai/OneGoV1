@@ -42,73 +42,71 @@ const PeopleManagement: React.FC<PeopleManagementProps> = ({ user }) => {
 
   if (loading) {
     return (
-      <div className="p-4 md:p-8 flex items-center justify-center">
+      <div className="p-4 sm:p-6 lg:p-8 flex items-center justify-center">
         <div className="text-gray-500">Loading people...</div>
       </div>
     );
   }
 
   return (
-    <div className="p-2 sm:p-4 md:p-8">
-      <div className="max-w-full mx-auto">
-        <PeopleManagementHeader
-          isAdmin={isAdmin}
-          licenseInfo={licenseInfo}
-          onInviteClick={() => setShowInviteModal(true)}
-          onAssignmentClick={() => setShowAssignmentModal(true)}
-          onTeamClick={() => setShowTeamModal(true)}
-          onRefresh={handleManualRefresh}
-          lastUpdated={lastUpdated}
-        />
+    <div className="p-2 sm:p-4 lg:p-8">
+      <PeopleManagementHeader
+        isAdmin={isAdmin}
+        licenseInfo={licenseInfo}
+        onInviteClick={() => setShowInviteModal(true)}
+        onAssignmentClick={() => setShowAssignmentModal(true)}
+        onTeamClick={() => setShowTeamModal(true)}
+        onRefresh={handleManualRefresh}
+        lastUpdated={lastUpdated}
+      />
 
-        {isAdmin && (
-          <>
-            <LicenseUsageCard licenseInfo={licenseInfo} />
-            <PendingInvitations 
-              invitations={invitations} 
-              onInvitationUpdate={loadData}
-              user={user}
-            />
-          </>
-        )}
-        
-        <PeopleTable 
-          people={people} 
-          currentUser={user}
-          onPeopleUpdate={loadData}
-        />
-        
-        {isAdmin && (
-          <>
-            <InviteModal
-              showModal={showInviteModal}
-              onClose={() => setShowInviteModal(false)}
-              inviteEmails={inviteEmails}
-              setInviteEmails={setInviteEmails}
-              inviteRole={inviteRole}
-              setInviteRole={setInviteRole}
-              availableLicenses={availableLicenses}
-              onInvite={handleInviteSubmit}
-              loading={sendingInvites}
-            />
-            
-            <CourseAssignmentModal
-              isOpen={showAssignmentModal}
-              onClose={() => setShowAssignmentModal(false)}
-              user={user}
-              onAssignmentComplete={loadData}
-            />
-            
-            <TeamManagementModal
-              isOpen={showTeamModal}
-              onClose={() => setShowTeamModal(false)}
-              user={user}
-              people={people}
-              onTeamUpdate={loadData}
-            />
-          </>
-        )}
-      </div>
+      {isAdmin && (
+        <>
+          <LicenseUsageCard licenseInfo={licenseInfo} />
+          <PendingInvitations 
+            invitations={invitations} 
+            onInvitationUpdate={loadData}
+            user={user}
+          />
+        </>
+      )}
+      
+      <PeopleTable 
+        people={people} 
+        currentUser={user}
+        onPeopleUpdate={loadData}
+      />
+      
+      {isAdmin && (
+        <>
+          <InviteModal
+            showModal={showInviteModal}
+            onClose={() => setShowInviteModal(false)}
+            inviteEmails={inviteEmails}
+            setInviteEmails={setInviteEmails}
+            inviteRole={inviteRole}
+            setInviteRole={setInviteRole}
+            availableLicenses={availableLicenses}
+            onInvite={handleInviteSubmit}
+            loading={sendingInvites}
+          />
+          
+          <CourseAssignmentModal
+            isOpen={showAssignmentModal}
+            onClose={() => setShowAssignmentModal(false)}
+            user={user}
+            onAssignmentComplete={loadData}
+          />
+          
+          <TeamManagementModal
+            isOpen={showTeamModal}
+            onClose={() => setShowTeamModal(false)}
+            user={user}
+            people={people}
+            onTeamUpdate={loadData}
+          />
+        </>
+      )}
     </div>
   );
 };

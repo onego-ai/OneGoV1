@@ -10,7 +10,7 @@ const CourseContentRenderer: React.FC<CourseContentRendererProps> = ({ content, 
   const renderContent = (text: string) => {
     // Handle undefined or null content
     if (!text) {
-      return <p className="text-gray-500 italic">No content available</p>;
+      return <p className="text-gray-500 italic text-sm sm:text-base">No content available</p>;
     }
     
     // Split content into lines
@@ -21,13 +21,13 @@ const CourseContentRenderer: React.FC<CourseContentRendererProps> = ({ content, 
       
       // Skip empty lines
       if (!trimmedLine) {
-        return <div key={index} className="h-4"></div>;
+        return <div key={index} className="h-3 sm:h-4"></div>;
       }
       
       // Main heading (starts with #)
       if (trimmedLine.startsWith('# ')) {
         return (
-          <h1 key={index} className="text-2xl font-bold text-gray-900 mb-4 mt-6 first:mt-0">
+          <h1 key={index} className="text-xl sm:text-2xl font-bold text-gray-900 mb-3 sm:mb-4 mt-4 sm:mt-6 first:mt-0">
             {trimmedLine.substring(2)}
           </h1>
         );
@@ -36,7 +36,7 @@ const CourseContentRenderer: React.FC<CourseContentRendererProps> = ({ content, 
       // Sub heading (starts with ##)
       if (trimmedLine.startsWith('## ')) {
         return (
-          <h2 key={index} className="text-xl font-semibold text-gray-800 mb-3 mt-5">
+          <h2 key={index} className="text-lg sm:text-xl font-semibold text-gray-800 mb-2 sm:mb-3 mt-4 sm:mt-5">
             {trimmedLine.substring(3)}
           </h2>
         );
@@ -45,7 +45,7 @@ const CourseContentRenderer: React.FC<CourseContentRendererProps> = ({ content, 
       // Sub-sub heading (starts with ###)
       if (trimmedLine.startsWith('### ')) {
         return (
-          <h3 key={index} className="text-lg font-medium text-gray-700 mb-2 mt-4">
+          <h3 key={index} className="text-base sm:text-lg font-medium text-gray-700 mb-2 mt-3 sm:mt-4">
             {trimmedLine.substring(4)}
           </h3>
         );
@@ -55,8 +55,8 @@ const CourseContentRenderer: React.FC<CourseContentRendererProps> = ({ content, 
       if (trimmedLine.startsWith('- ')) {
         return (
           <div key={index} className="flex items-start space-x-2 mb-2">
-            <span className="text-blue-500 mt-2 flex-shrink-0">•</span>
-            <span className="text-gray-700 leading-relaxed">
+            <span className="text-blue-500 mt-1.5 sm:mt-2 flex-shrink-0">•</span>
+            <span className="text-sm sm:text-base text-gray-700 leading-relaxed">
               {trimmedLine.substring(2)}
             </span>
           </div>
@@ -67,7 +67,7 @@ const CourseContentRenderer: React.FC<CourseContentRendererProps> = ({ content, 
       if (trimmedLine.includes('**')) {
         const parts = trimmedLine.split('**');
         return (
-          <p key={index} className="text-gray-700 leading-relaxed mb-3">
+          <p key={index} className="text-sm sm:text-base text-gray-700 leading-relaxed mb-2 sm:mb-3">
             {parts.map((part, partIndex) => 
               partIndex % 2 === 1 ? (
                 <strong key={partIndex} className="font-semibold text-gray-900">
@@ -83,7 +83,7 @@ const CourseContentRenderer: React.FC<CourseContentRendererProps> = ({ content, 
       
       // Regular paragraph
       return (
-        <p key={index} className="text-gray-700 leading-relaxed mb-3">
+        <p key={index} className="text-sm sm:text-base text-gray-700 leading-relaxed mb-2 sm:mb-3">
           {trimmedLine}
         </p>
       );
@@ -92,8 +92,8 @@ const CourseContentRenderer: React.FC<CourseContentRendererProps> = ({ content, 
 
   return (
     <div className={`prose max-w-none ${className}`}>
-      <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
-        <div className="space-y-4">
+      <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-4 sm:p-6">
+        <div className="space-y-3 sm:space-y-4">
           {renderContent(content)}
         </div>
       </div>
