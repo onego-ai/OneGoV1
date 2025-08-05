@@ -112,7 +112,7 @@ const CourseReader: React.FC<CourseReaderProps> = ({
         console.log('Using existing course modules:', courseSections);
         
         // Generate quizzes based on course content
-        const generatedQuizzes = generateQuizzes(courseSections, course.course_plan?.numberOfQuizzes || 1);
+        const generatedQuizzes = await generateQuizzes(courseSections, course.course_plan?.numberOfQuizzes || 1);
         setQuizzes(generatedQuizzes);
         console.log('Generated quizzes:', generatedQuizzes);
       } else {
@@ -122,7 +122,7 @@ const CourseReader: React.FC<CourseReaderProps> = ({
         console.log('Generated new course sections:', generatedSections);
         
         // Generate quizzes for fallback sections
-        const generatedQuizzes = generateQuizzes(generatedSections, 2);
+        const generatedQuizzes = await generateQuizzes(generatedSections, 2);
         setQuizzes(generatedQuizzes);
       }
       
@@ -241,65 +241,72 @@ Format as JSON with sections array containing: id, title, content, keyPoints, du
     }));
   };
 
-  const generateQuizzes = (sections: CourseSection[], numberOfQuizzes: number): Quiz[] => {
+  const generateQuizzes = async (sections: CourseSection[], numberOfQuizzes: number): Promise<Quiz[]> => {
     const quizzes: Quiz[] = [];
     
     for (let i = 0; i < numberOfQuizzes; i++) {
       const quizSections = sections.slice(i * Math.ceil(sections.length / numberOfQuizzes), (i + 1) * Math.ceil(sections.length / numberOfQuizzes));
       const quizTitle = `Knowledge Check ${i + 1}`;
-      
       const questions: QuizQuestion[] = [];
-      
-      // Generate questions based on course content
-      quizSections.forEach((section, sectionIndex) => {
-        // Question 1: Based on section title
-        questions.push({
-          id: `q${i}-${sectionIndex}-1`,
-          question: `What is the main focus of "${section.title}"?`,
-          options: [
-            `Understanding ${section.title.toLowerCase()}`,
-            `Advanced techniques in ${section.title.toLowerCase()}`,
-            `Basic introduction to ${section.title.toLowerCase()}`,
-            `Practical applications of ${section.title.toLowerCase()}`
-          ],
-          correctAnswer: 0,
-          explanation: `This section focuses on understanding the core concepts of ${section.title}.`
-        });
-        
-        // Question 2: Based on key points
-        if (section.keyPoints.length > 0) {
-          const keyPoint = section.keyPoints[0];
-          questions.push({
-            id: `q${i}-${sectionIndex}-2`,
-            question: `Which of the following is a key point from this section?`,
-            options: [
-              keyPoint,
-              `Advanced techniques and strategies`,
-              `Historical background and context`,
-              `Future trends and developments`
-            ],
-            correctAnswer: 0,
-            explanation: `This key point is directly mentioned in the section content.`
+
+      // Generate AI-powered questions for each section
+      for (const section of quizSections) {
+        try {
+          console.log(`Generating AI quiz questions for section: ${section.title}`);
+          
+          const response = await fetch('https://yzgxmmgghoiiyddebwrr.supabase.co/functions/v1/generate-quiz', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl6Z3htbWdnaG9paXlkZGVid3JyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQyMDE3MzMsImV4cCI6MjA2OTc3NzczM30.gzI5CAdCdCbcc-jbRcJe2hjXWnQX7Yc8KqWWKFypZdU`,
+            },
+            body: JSON.stringify({
+              sectionTitle: section.title,
+              sectionContent: section.content,
+              keyPoints: section.keyPoints,
+              numberOfQuestions: 2, // 2 questions per section
+              courseTopic: course.course_plan?.courseDescription || 'Course content'
+            })
           });
+
+          if (!response.ok) {
+            console.error('Failed to generate AI quiz questions:', response.status);
+            // Fallback to basic questions if AI generation fails
+            questions.push(createFallbackQuestion(section, questions.length));
+            continue;
+          }
+
+          const data = await response.json();
+          
+          if (data.success && data.questions) {
+            console.log(`Generated ${data.questions.length} AI questions for section: ${section.title}`);
+            questions.push(...data.questions);
+          } else {
+            console.error('Invalid response from AI quiz generation:', data);
+            questions.push(createFallbackQuestion(section, questions.length));
+          }
+        } catch (error) {
+          console.error('Error generating AI quiz questions:', error);
+          questions.push(createFallbackQuestion(section, questions.length));
         }
-      });
-      
+      }
+
       // Ensure we have at least 3 questions per quiz
       while (questions.length < 3) {
         questions.push({
-          id: `q${i}-extra-${questions.length}`,
+          id: `fallback-${i}-${questions.length}`,
           question: `What is the primary goal of this course?`,
           options: [
-            'To provide comprehensive understanding of the subject',
-            'To offer advanced technical skills',
-            'To introduce basic concepts only',
-            'To focus on theoretical knowledge'
+            'To provide comprehensive understanding of core concepts',
+            'To offer advanced technical skills only',
+            'To introduce basic concepts without depth',
+            'To focus on theoretical knowledge only'
           ],
           correctAnswer: 0,
-          explanation: 'The course aims to provide a comprehensive understanding of the subject matter.'
+          explanation: 'The course aims to provide a comprehensive understanding of core concepts.'
         });
       }
-      
+
       quizzes.push({
         id: `quiz-${i + 1}`,
         title: quizTitle,
@@ -309,6 +316,22 @@ Format as JSON with sections array containing: id, title, content, keyPoints, du
     }
     
     return quizzes;
+  };
+
+  // Helper function to create fallback questions when AI generation fails
+  const createFallbackQuestion = (section: CourseSection, questionIndex: number): QuizQuestion => {
+    return {
+      id: `fallback-${section.id}-${questionIndex}`,
+      question: `What is the main concept discussed in "${section.title}"?`,
+      options: [
+        `Understanding ${section.title.toLowerCase()}`,
+        `Advanced techniques in ${section.title.toLowerCase()}`,
+        `Basic introduction to ${section.title.toLowerCase()}`,
+        `Practical applications of ${section.title.toLowerCase()}`
+      ],
+      correctAnswer: 0,
+      explanation: `This section focuses on understanding the core concept of ${section.title}.`
+    };
   };
 
   const markSectionComplete = (sectionId: string) => {
