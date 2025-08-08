@@ -111,10 +111,18 @@ const CourseReader: React.FC<CourseReaderProps> = ({
         setSections(courseSections);
         console.log('Using existing course modules:', courseSections);
         
-        // Generate quizzes based on course content
-        const generatedQuizzes = await generateQuizzes(courseSections, course.course_plan?.numberOfQuizzes || 1);
-        setQuizzes(generatedQuizzes);
-        console.log('Generated quizzes:', generatedQuizzes);
+        // If quizzes are already saved in course_plan, use them
+        if (course.course_plan?.quizzes && Array.isArray(course.course_plan.quizzes)) {
+          setQuizzes(course.course_plan.quizzes);
+          console.log('Loaded persisted quizzes from course_plan');
+        } else {
+          // Generate quizzes based on course content
+          const generatedQuizzes = await generateQuizzes(courseSections, course.course_plan?.numberOfQuizzes || 1);
+          setQuizzes(generatedQuizzes);
+          console.log('Generated quizzes:', generatedQuizzes);
+          // Persist generated quizzes so they appear in editor later
+          await persistQuizzes(generatedQuizzes, true);
+        }
       } else {
         // Fallback to generating sections if modules don't exist
         const generatedSections = await generateCourseSections();
@@ -124,6 +132,7 @@ const CourseReader: React.FC<CourseReaderProps> = ({
         // Generate quizzes for fallback sections
         const generatedQuizzes = await generateQuizzes(generatedSections, 2);
         setQuizzes(generatedQuizzes);
+        await persistQuizzes(generatedQuizzes, true);
       }
       
       // No timer; just record session start time locally
@@ -576,6 +585,29 @@ Format as JSON with sections array containing: id, title, content, keyPoints, du
     }
   };
 
+  // Persist quizzes to the course's course_plan for future sessions
+  const persistQuizzes = async (updatedQuizzes: Quiz[], silent: boolean = false) => {
+    try {
+      const updatedPlan = {
+        ...course.course_plan,
+        quizzes: updatedQuizzes,
+      };
+      const { error } = await supabase
+        .from('courses')
+        .update({ course_plan: updatedPlan, updated_at: new Date().toISOString() })
+        .eq('id', course.id);
+      if (error) throw error;
+      if (!silent) {
+        toast({ title: 'Quiz saved', description: 'Your quiz changes have been saved.' });
+      }
+    } catch (e) {
+      console.error('Failed to persist quizzes:', e);
+      if (!silent) {
+        toast({ title: 'Save failed', description: 'Could not save quiz changes.', variant: 'destructive' });
+      }
+    }
+  };
+
   // Starts the first incomplete quiz, or the first quiz if all are completed
   const startFirstAvailableQuiz = () => {
     const nextQuiz = quizzes.find(q => !q.isCompleted) || quizzes[0];
@@ -790,6 +822,8 @@ Format as JSON with sections array containing: id, title, content, keyPoints, du
     const [answers, setAnswers] = useState<{[key: string]: number}>({});
     const [showResults, setShowResults] = useState(false);
     const [score, setScore] = useState(0);
+    const [isEditing, setIsEditing] = useState(false);
+    const [editableQuiz, setEditableQuiz] = useState<Quiz>({ ...quiz, questions: quiz.questions.map(q => ({ ...q, options: [...q.options] })) });
 
     const currentQuestion = quiz.questions[currentQuestionIndex];
 
@@ -804,7 +838,6 @@ Format as JSON with sections array containing: id, title, content, keyPoints, du
       if (currentQuestionIndex < quiz.questions.length - 1) {
         setCurrentQuestionIndex(currentQuestionIndex + 1);
       } else {
-        // Calculate score
         let correctAnswers = 0;
         quiz.questions.forEach(question => {
           if (answers[question.id] === question.correctAnswer) {
@@ -821,6 +854,134 @@ Format as JSON with sections array containing: id, title, content, keyPoints, du
       onComplete(score);
     };
 
+    const updateQuizInState = (updated: Quiz) => {
+      setQuizzes(prev => {
+        const next = prev.map(q => (q.id === updated.id ? updated : q));
+        // Persist full quizzes set
+        persistQuizzes(next);
+        return next;
+      });
+    };
+
+    const addQuestion = () => {
+      const newQuestion: QuizQuestion = {
+        id: `custom-${Date.now()}`,
+        question: 'New question',
+        options: ['Option 1', 'Option 2', 'Option 3', 'Option 4'],
+        correctAnswer: 0,
+        explanation: ''
+      };
+      setEditableQuiz(prev => ({ ...prev, questions: [...prev.questions, newQuestion] }));
+    };
+
+    const removeQuestion = (qid: string) => {
+      setEditableQuiz(prev => ({ ...prev, questions: prev.questions.filter(q => q.id !== qid) }));
+    };
+
+    const updateQuestionText = (qid: string, text: string) => {
+      setEditableQuiz(prev => ({
+        ...prev,
+        questions: prev.questions.map(q => (q.id === qid ? { ...q, question: text } : q))
+      }));
+    };
+
+    const addOption = (qid: string) => {
+      setEditableQuiz(prev => ({
+        ...prev,
+        questions: prev.questions.map(q => (q.id === qid ? { ...q, options: [...q.options, `Option ${q.options.length + 1}`] } : q))
+      }));
+    };
+
+    const removeOption = (qid: string, index: number) => {
+      setEditableQuiz(prev => ({
+        ...prev,
+        questions: prev.questions.map(q => {
+          if (q.id !== qid) return q;
+          const newOptions = q.options.filter((_, i) => i !== index);
+          const newCorrect = Math.min(q.correctAnswer, newOptions.length - 1);
+          return { ...q, options: newOptions, correctAnswer: Math.max(0, newCorrect) };
+        })
+      }));
+    };
+
+    const updateOptionText = (qid: string, index: number, text: string) => {
+      setEditableQuiz(prev => ({
+        ...prev,
+        questions: prev.questions.map(q => {
+          if (q.id !== qid) return q;
+          const newOptions = [...q.options];
+          newOptions[index] = text;
+          return { ...q, options: newOptions };
+        })
+      }));
+    };
+
+    const setCorrect = (qid: string, index: number) => {
+      setEditableQuiz(prev => ({
+        ...prev,
+        questions: prev.questions.map(q => (q.id === qid ? { ...q, correctAnswer: index } : q))
+      }));
+    };
+
+    const saveEdits = () => {
+      updateQuizInState(editableQuiz);
+      setIsEditing(false);
+    };
+
+    if (isEditing) {
+      return (
+        <div className="bg-white rounded-lg shadow-md border p-4 sm:p-6 lg:p-8 max-w-3xl mx-auto">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Edit Quiz</h2>
+            <div className="space-x-2">
+              <button onClick={() => setIsEditing(false)} className="px-3 py-2 text-sm rounded-md border">Cancel</button>
+              <button onClick={saveEdits} className="px-3 py-2 text-sm rounded-md bg-green-500 text-white hover:bg-green-600">Save Changes</button>
+            </div>
+          </div>
+          <div className="space-y-6">
+            {editableQuiz.questions.map((q, qi) => (
+              <div key={q.id} className="border rounded-lg p-3 sm:p-4">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1 mr-3">
+                    <label className="text-xs font-medium text-gray-700">Question {qi + 1}</label>
+                    <input
+                      value={q.question}
+                      onChange={(e) => updateQuestionText(q.id, e.target.value)}
+                      className="w-full mt-1 p-2 border rounded"
+                    />
+                  </div>
+                  <button onClick={() => removeQuestion(q.id)} className="text-red-600 text-sm">Remove</button>
+                </div>
+                <div className="mt-3">
+                  <label className="text-xs font-medium text-gray-700">Options</label>
+                  <div className="mt-2 space-y-2">
+                    {q.options.map((opt, oi) => (
+                      <div key={oi} className="flex items-center space-x-2">
+                        <input
+                          type="radio"
+                          name={`correct-${q.id}`}
+                          checked={q.correctAnswer === oi}
+                          onChange={() => setCorrect(q.id, oi)}
+                        />
+                        <input
+                          value={opt}
+                          onChange={(e) => updateOptionText(q.id, oi, e.target.value)}
+                          className="flex-1 p-2 border rounded"
+                        />
+                        <button onClick={() => removeOption(q.id, oi)} className="text-red-600 text-sm">Delete</button>
+                      </div>
+                    ))}
+                    <button onClick={() => addOption(q.id)} className="text-green-600 text-sm">+ Add Option</button>
+                  </div>
+                </div>
+              </div>
+            ))}
+            <button onClick={addQuestion} className="px-3 py-2 text-sm rounded-md bg-blue-500 text-white hover:bg-blue-600">+ Add Question</button>
+          </div>
+        </div>
+      );
+    }
+
     if (showResults) {
       return (
         <div className="bg-white rounded-lg shadow-md border p-4 sm:p-6 lg:p-8 max-w-2xl mx-auto">
@@ -830,7 +991,6 @@ Format as JSON with sections array containing: id, title, content, keyPoints, du
             <p className="text-sm sm:text-base text-gray-600 mb-4 sm:mb-6">
               You got {Math.round((score / 100) * quiz.questions.length)} out of {quiz.questions.length} questions correct!
             </p>
-            
             <div className="space-y-3 sm:space-y-4 mb-4 sm:mb-6">
               {quiz.questions.map((question, index) => (
                 <div key={question.id} className="text-left p-3 sm:p-4 border rounded-lg">
@@ -867,7 +1027,6 @@ Format as JSON with sections array containing: id, title, content, keyPoints, du
                 </div>
               ))}
             </div>
-            
             <button
               onClick={handleComplete}
               className="bg-blue-500 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm sm:text-base touch-target w-full sm:w-auto"
@@ -881,18 +1040,21 @@ Format as JSON with sections array containing: id, title, content, keyPoints, du
 
     return (
       <div className="bg-white rounded-lg shadow-md border p-4 sm:p-6 lg:p-8 max-w-2xl mx-auto">
-        <div className="mb-4 sm:mb-6">
-          <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">{quiz.title}</h2>
-          <p className="text-sm sm:text-base text-gray-600">
-            Question {currentQuestionIndex + 1} of {quiz.questions.length}
-          </p>
+        <div className="mb-4 sm:mb-6 flex items-center justify-between">
+          <div>
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">{quiz.title}</h2>
+            <p className="text-sm sm:text-base text-gray-600">
+              Question {currentQuestionIndex + 1} of {quiz.questions.length}
+            </p>
+          </div>
+          {user?.role === 'Admin' && (
+            <button onClick={() => setIsEditing(true)} className="px-3 py-2 text-sm rounded-md bg-green-500 text-white hover:bg-green-600">Edit Quiz</button>
+          )}
         </div>
-
         <div className="mb-4 sm:mb-6">
           <h3 className="text-base sm:text-lg font-medium text-gray-900 mb-3 sm:mb-4">
             {currentQuestion.question}
           </h3>
-          
           <div className="space-y-2 sm:space-y-3">
             {currentQuestion.options.map((option, index) => (
               <button
@@ -909,7 +1071,6 @@ Format as JSON with sections array containing: id, title, content, keyPoints, du
             ))}
           </div>
         </div>
-
         <div className="flex flex-col sm:flex-row sm:justify-between space-y-3 sm:space-y-0">
           <button
             onClick={() => setCurrentQuestionIndex(Math.max(0, currentQuestionIndex - 1))}
@@ -918,7 +1079,6 @@ Format as JSON with sections array containing: id, title, content, keyPoints, du
           >
             Previous
           </button>
-          
           <button
             onClick={handleNext}
             disabled={answers[currentQuestion.id] === undefined}

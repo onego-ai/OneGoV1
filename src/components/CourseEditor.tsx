@@ -48,6 +48,20 @@ interface Module {
   duration: number;
 }
 
+interface QuizQuestion {
+  id: string;
+  question: string;
+  options: string[];
+  correctAnswer: number;
+  explanation?: string;
+}
+
+interface Quiz {
+  id: string;
+  title: string;
+  questions: QuizQuestion[];
+}
+
 interface ModuleEditorProps {
   module: Module;
   isEditing: boolean;
@@ -102,10 +116,6 @@ const ModuleEditor = React.memo<ModuleEditorProps>(({
             )}
           </div>
           <div className="flex items-center space-x-2">
-            <div className="flex items-center text-sm text-gray-500">
-              <Clock className="h-4 w-4 mr-1" />
-              {module.duration} min
-            </div>
             <button
               onClick={() => onSetEditingModuleId(isEditing ? null : module.id)}
               className="p-1 text-gray-500 hover:text-blue-600"
@@ -136,6 +146,8 @@ const ModuleEditor = React.memo<ModuleEditorProps>(({
                     value={looksLikeHtml(module.content) ? module.content : plainTextToHtml(module.content)}
                     onChange={(html) => onUpdateModule(module.id, { content: html })}
                     className="min-h-[480px]"
+                    // @ts-ignore - quill v2 SSR safety
+                    ssr={true}
                     modules={{
                       toolbar: [
                         [{ header: [1, 2, 3, false] }],
@@ -199,7 +211,11 @@ const CourseEditor: React.FC<CourseEditorProps> = ({ course, user, onBack, onSav
   const [editingModuleId, setEditingModuleId] = useState<number | null>(null);
   const [expandedModules, setExpandedModules] = useState<Set<number>>(new Set());
   const [loading, setLoading] = useState(false);
+  const [quizzes, setQuizzes] = useState<Quiz[]>([]);
+  const [expandedQuizIds, setExpandedQuizIds] = useState<Set<string>>(new Set());
+  const [generatingQuizzes, setGeneratingQuizzes] = useState(false);
   const { toast } = useToast();
+  // Auto-save disabled: quizzes will be saved only via Save Changes
 
   useEffect(() => {
     if (course) {
@@ -213,6 +229,40 @@ const CourseEditor: React.FC<CourseEditorProps> = ({ course, user, onBack, onSav
           duration: module.duration || 5
         })));
       }
+      if (course.course_plan?.quizzes && Array.isArray(course.course_plan.quizzes)) {
+        setQuizzes(course.course_plan.quizzes);
+      } else {
+        setQuizzes([]);
+      }
+      // No auto-save on initial load
+
+      // Always fetch latest course from DB to ensure we have persisted quizzes
+      (async () => {
+        try {
+          const { data, error } = await supabase
+            .from('courses')
+            .select('*')
+            .eq('id', course.id)
+            .single();
+          if (!error && data) {
+            const latestPlan = (data as any).course_plan || {};
+            if (latestPlan.modules) {
+              setModules(latestPlan.modules.map((m: any) => ({
+                id: m.id,
+                title: m.title,
+                content: m.content,
+                keyPoints: m.keyPoints || [],
+                duration: m.duration || 5
+              })));
+            }
+            if (Array.isArray(latestPlan.quizzes)) {
+              setQuizzes(latestPlan.quizzes);
+            }
+          }
+        } catch (e) {
+          console.error('Failed to refresh course for editor:', e);
+        }
+      })();
     }
   }, [course]);
 
@@ -297,7 +347,8 @@ const CourseEditor: React.FC<CourseEditorProps> = ({ course, user, onBack, onSav
         modules: modules.map((module, index) => ({
           ...module,
           id: index + 1 // Ensure sequential IDs
-        }))
+        })),
+        quizzes: quizzes
       };
 
       // Update course in database
@@ -333,6 +384,160 @@ const CourseEditor: React.FC<CourseEditorProps> = ({ course, user, onBack, onSav
     } finally {
       setLoading(false);
     }
+  };
+
+  const persistQuizzesOnly = async (newQuizzes: Quiz[]) => {
+    try {
+      const updatedCoursePlan = {
+        ...course.course_plan,
+        modules: modules.map((module, index) => ({ ...module, id: index + 1 })),
+        quizzes: newQuizzes,
+      };
+      const { error } = await supabase
+        .from('courses')
+        .update({ course_plan: updatedCoursePlan })
+        .eq('id', course.id);
+      if (error) throw error;
+      onSave({ ...course, course_plan: updatedCoursePlan });
+    } catch (e) {
+      console.error('Failed to persist quizzes from editor:', e);
+    }
+  };
+
+  const generateQuizzesFromModules = async () => {
+    try {
+      setGeneratingQuizzes(true);
+      // Build questions using the same edge function used in reader
+      const questions: QuizQuestion[] = [];
+      for (const module of modules) {
+        try {
+          const response = await fetch('https://yzgxmmgghoiiyddebwrr.supabase.co/functions/v1/generate-quiz', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY || ''}`,
+            },
+            body: JSON.stringify({
+              sectionTitle: module.title,
+              sectionContent: module.content,
+              keyPoints: module.keyPoints,
+              numberOfQuestions: 2,
+              courseTopic: course.course_plan?.courseDescription || course.course_title
+            })
+          });
+          if (response.ok) {
+            const data = await response.json();
+            if (data.success && Array.isArray(data.questions)) {
+              questions.push(...data.questions);
+            }
+          }
+        } catch (err) {
+          console.error('Quiz generation failed for module:', module.title, err);
+        }
+      }
+      // Fallback if no questions generated
+      if (questions.length === 0) {
+        for (const module of modules) {
+          questions.push({
+            id: `fallback-${module.id}-0`,
+            question: `What is the main idea of "${module.title}"?`,
+            options: [
+              `Understanding ${module.title.toLowerCase()}`,
+              `Advanced ${module.title.toLowerCase()}`,
+              `Irrelevant concept`,
+              `None of the above`
+            ],
+            correctAnswer: 0,
+            explanation: `This module focuses on understanding ${module.title}.`
+          });
+        }
+      }
+      const newQuizzes: Quiz[] = [
+        { id: 'quiz-1', title: 'Knowledge Check 1', questions }
+      ];
+      setQuizzes(newQuizzes);
+      // Do not persist now; user must click Save Changes
+      toast({ title: 'Quizzes generated', description: 'Remember to click "Save Changes" to persist your quiz.' });
+    } catch (e) {
+      console.error(e);
+      toast({ title: 'Generation failed', description: 'Could not generate quizzes.', variant: 'destructive' });
+    } finally {
+      setGeneratingQuizzes(false);
+    }
+  };
+
+  // Quiz editing helpers
+  const toggleQuizExpansion = (quizId: string) => {
+    const next = new Set(expandedQuizIds);
+    if (next.has(quizId)) next.delete(quizId); else next.add(quizId);
+    setExpandedQuizIds(next);
+  };
+
+  const updateQuizTitle = (quizId: string, title: string) => {
+    setQuizzes(prev => prev.map(q => q.id === quizId ? { ...q, title } : q));
+  };
+
+  const addQuestionToQuiz = (quizId: string) => {
+    const newQ: QuizQuestion = {
+      id: `editor-${Date.now()}`,
+      question: 'New question',
+      options: ['Option 1', 'Option 2', 'Option 3', 'Option 4'],
+      correctAnswer: 0,
+      explanation: ''
+    };
+    setQuizzes(prev => prev.map(q => q.id === quizId ? { ...q, questions: [...q.questions, newQ] } : q));
+  };
+
+  const removeQuestionFromQuiz = (quizId: string, questionId: string) => {
+    setQuizzes(prev => prev.map(q => q.id === quizId ? { ...q, questions: q.questions.filter(qq => qq.id !== questionId) } : q));
+  };
+
+  const updateQuestionText = (quizId: string, questionId: string, text: string) => {
+    setQuizzes(prev => prev.map(q => q.id === quizId ? { ...q, questions: q.questions.map(qq => qq.id === questionId ? { ...qq, question: text } : qq) } : q));
+  };
+
+  const addOptionToQuestion = (quizId: string, questionId: string) => {
+    setQuizzes(prev => prev.map(q => {
+      if (q.id !== quizId) return q;
+      return {
+        ...q,
+        questions: q.questions.map(qq => qq.id === questionId ? { ...qq, options: [...qq.options, `Option ${qq.options.length + 1}`] } : qq)
+      };
+    }));
+  };
+
+  const removeOptionFromQuestion = (quizId: string, questionId: string, optionIndex: number) => {
+    setQuizzes(prev => prev.map(q => {
+      if (q.id !== quizId) return q;
+      return {
+        ...q,
+        questions: q.questions.map(qq => {
+          if (qq.id !== questionId) return qq;
+          const newOptions = qq.options.filter((_, i) => i !== optionIndex);
+          const newCorrect = Math.min(qq.correctAnswer, newOptions.length - 1);
+          return { ...qq, options: newOptions, correctAnswer: Math.max(0, newCorrect) };
+        })
+      };
+    }));
+  };
+
+  const updateOptionText = (quizId: string, questionId: string, optionIndex: number, text: string) => {
+    setQuizzes(prev => prev.map(q => {
+      if (q.id !== quizId) return q;
+      return {
+        ...q,
+        questions: q.questions.map(qq => {
+          if (qq.id !== questionId) return qq;
+          const newOptions = [...qq.options];
+          newOptions[optionIndex] = text;
+          return { ...qq, options: newOptions };
+        })
+      };
+    }));
+  };
+
+  const setCorrectAnswer = (quizId: string, questionId: string, optionIndex: number) => {
+    setQuizzes(prev => prev.map(q => q.id === quizId ? { ...q, questions: q.questions.map(qq => qq.id === questionId ? { ...qq, correctAnswer: optionIndex } : qq) } : q));
   };
 
   return (
@@ -452,6 +657,88 @@ const CourseEditor: React.FC<CourseEditorProps> = ({ course, user, onBack, onSav
                 onUpdateKeyPoint={updateKeyPoint}
                 onDeleteKeyPoint={deleteKeyPoint}
               />
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Quizzes */}
+      <div className="bg-white border border-gray-200 rounded-lg p-6 mt-6">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl font-semibold text-gray-900">Quizzes</h2>
+          {quizzes.length === 0 && (
+            <button
+              onClick={generateQuizzesFromModules}
+              disabled={generatingQuizzes}
+              className="px-4 py-2 bg-green-500 text-white rounded-lg font-medium hover:bg-green-600 disabled:opacity-50"
+            >
+              {generatingQuizzes ? 'Generating...' : 'Generate Quizzes'}
+            </button>
+          )}
+        </div>
+        {quizzes.length === 0 ? (
+          <div className="text-center py-8 text-gray-500">
+            <p>No quizzes available.</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {quizzes.map((q) => (
+              <div key={q.id} className="border rounded-lg">
+                <div className="p-4 flex items-center justify-between">
+                  <div className="flex-1 mr-3">
+                    <input
+                      value={q.title}
+                      onChange={(e) => updateQuizTitle(q.id, e.target.value)}
+                      className="w-full text-lg font-semibold border-b border-gray-300 focus:border-blue-500 focus:outline-none px-2 py-1"
+                    />
+                  </div>
+                  <button onClick={() => toggleQuizExpansion(q.id)} className="text-gray-600">
+                    {expandedQuizIds.has(q.id) ? <ChevronDown className="h-5 w-5" /> : <ChevronRight className="h-5 w-5" />}
+                  </button>
+                </div>
+                {expandedQuizIds.has(q.id) && (
+                  <div className="p-4 border-t space-y-4">
+                    {q.questions.map((qq) => (
+                      <div key={qq.id} className="border rounded-lg p-3">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1 mr-3">
+                            <label className="text-xs font-medium text-gray-700">Question</label>
+                            <input
+                              value={qq.question}
+                              onChange={(e) => updateQuestionText(q.id, qq.id, e.target.value)}
+                              className="w-full mt-1 p-2 border rounded"
+                            />
+                          </div>
+                          <button onClick={() => removeQuestionFromQuiz(q.id, qq.id)} className="text-red-600 text-sm">Remove</button>
+                        </div>
+                        <div className="mt-3">
+                          <label className="text-xs font-medium text-gray-700">Options</label>
+                          <div className="mt-2 space-y-2">
+                            {qq.options.map((opt, oi) => (
+                              <div key={oi} className="flex items-center space-x-2">
+                                <input
+                                  type="radio"
+                                  name={`correct-${qq.id}`}
+                                  checked={qq.correctAnswer === oi}
+                                  onChange={() => setCorrectAnswer(q.id, qq.id, oi)}
+                                />
+                                <input
+                                  value={opt}
+                                  onChange={(e) => updateOptionText(q.id, qq.id, oi, e.target.value)}
+                                  className="flex-1 p-2 border rounded"
+                                />
+                                <button onClick={() => removeOptionFromQuestion(q.id, qq.id, oi)} className="text-red-600 text-sm">Delete</button>
+                              </div>
+                            ))}
+                            <button onClick={() => addOptionToQuestion(q.id, qq.id)} className="text-green-600 text-sm">+ Add Option</button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                    <button onClick={() => addQuestionToQuiz(q.id)} className="px-3 py-2 text-sm rounded-md bg-blue-500 text-white hover:bg-blue-600">+ Add Question</button>
+                  </div>
+                )}
+              </div>
             ))}
           </div>
         )}
