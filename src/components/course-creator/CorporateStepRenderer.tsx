@@ -352,52 +352,60 @@ const CorporateStepRenderer: React.FC<CorporateStepRendererProps> = ({
                 <FileText className="h-4 w-4 sm:h-5 sm:w-5 mr-2 text-blue-500" />
                 PDF Document Upload
               </h4>
-              
-              {!uploadedFile ? (
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 sm:p-8 text-center hover:border-green-500 transition-colors">
-                  <input
-                    type="file"
-                    accept=".pdf"
-                    onChange={handleFileUpload}
-                    className="hidden"
-                    id="pdf-upload"
-                  />
-                  <label
-                    htmlFor="pdf-upload"
-                    className="cursor-pointer block"
-                  >
-                    <Upload className="h-8 w-8 sm:h-12 sm:w-12 text-gray-400 mx-auto mb-2 sm:mb-4" />
-                    <p className="text-sm sm:text-base text-gray-600 mb-1 sm:mb-2">
-                      <span className="font-medium text-green-600">Click to upload</span> or drag and drop
-                    </p>
-                    <p className="text-xs sm:text-sm text-gray-500">PDF files only (max 10MB)</p>
-                  </label>
-                </div>
-              ) : (
-                <div className="border border-gray-200 rounded-lg p-3 sm:p-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-3">
-                      <FileText className="h-8 w-8 text-blue-500" />
-                      <div>
-                        <p className="text-sm sm:text-base font-medium text-gray-900">{uploadedFile.name}</p>
-                        <p className="text-xs sm:text-sm text-gray-500">
-                          {(uploadedFile.size / 1024 / 1024).toFixed(2)} MB
-                        </p>
-                      </div>
-                    </div>
-                    <button
-                      onClick={removeFile}
-                      className="p-1 text-gray-400 hover:text-red-500 touch-target"
+              {isProUser ? (
+                !uploadedFile ? (
+                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 sm:p-8 text-center hover:border-green-500 transition-colors">
+                    <input
+                      type="file"
+                      accept=".pdf"
+                      onChange={handleFileUpload}
+                      className="hidden"
+                      id="pdf-upload"
+                    />
+                    <label
+                      htmlFor="pdf-upload"
+                      className="cursor-pointer block"
                     >
-                      <X className="h-4 w-4" />
-                    </button>
+                      <Upload className="h-8 w-8 sm:h-12 sm:w-12 text-gray-400 mx-auto mb-2 sm:mb-4" />
+                      <p className="text-sm sm:text-base text-gray-600 mb-1 sm:mb-2">
+                        <span className="font-medium text-green-600">Click to upload</span> or drag and drop
+                      </p>
+                      <p className="text-xs sm:text-sm text-gray-500">PDF files only (max 10MB)</p>
+                    </label>
                   </div>
-                  {isProcessing && (
-                    <div className="mt-3 flex items-center space-x-2 text-sm text-blue-600">
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      <span>Processing PDF...</span>
+                ) : (
+                  <div className="border border-gray-200 rounded-lg p-3 sm:p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        <FileText className="h-8 w-8 text-blue-500" />
+                        <div>
+                          <p className="text-sm sm:text-base font-medium text-gray-900">{uploadedFile.name}</p>
+                          <p className="text-xs sm:text-sm text-gray-500">
+                            {(uploadedFile.size / 1024 / 1024).toFixed(2)} MB
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={removeFile}
+                        className="p-1 text-gray-400 hover:text-red-500 touch-target"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
                     </div>
-                  )}
+                    {isProcessing && (
+                      <div className="mt-3 flex items-center space-x-2 text-sm text-blue-600">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <span>Processing PDF...</span>
+                      </div>
+                    )}
+                  </div>
+                )
+              ) : (
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 sm:p-4">
+                  <div className="flex items-center space-x-2">
+                    <Crown className="h-4 w-4 text-yellow-600" />
+                    <span className="text-sm text-yellow-800">Upgrade to a paid plan to upload and extract PDF content.</span>
+                  </div>
                 </div>
               )}
             </div>
@@ -409,55 +417,63 @@ const CorporateStepRenderer: React.FC<CorporateStepRendererProps> = ({
                 Website Content Extraction
               </h4>
               <p className="text-xs sm:text-sm text-gray-500 -mt-2 mb-3">Please include the full URL with https (e.g., https://example.com).</p>
-              
-              {!formData.websiteContent ? (
-                <div className="space-y-3 sm:space-y-4">
-                  <input
-                    type="url"
-                    value={websiteUrl}
-                    onChange={(e) => setWebsiteUrl(e.target.value)}
-                    placeholder="https://example.com"
-                    className="w-full p-2 sm:p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 text-sm sm:text-base"
-                  />
-                  <button
-                    onClick={handleWebsiteScraping}
-                    disabled={!isValidUrl(websiteUrl) || isScrapingWebsite}
-                    className={`w-full p-2 sm:p-3 rounded-lg font-medium text-sm sm:text-base touch-target ${
-                      isValidUrl(websiteUrl) && !isScrapingWebsite
-                        ? 'bg-green-500 hover:bg-green-600 text-white'
-                        : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                    }`}
-                  >
-                    {isScrapingWebsite ? (
-                      <div className="flex items-center justify-center space-x-2">
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        <span>Extracting content...</span>
-                      </div>
-                    ) : (
-                      <div className="flex items-center justify-center space-x-2">
-                        <Link className="h-4 w-4" />
-                        <span>Extract Content</span>
-                      </div>
-                    )}
-                  </button>
-                </div>
-              ) : (
-                <div className="border border-gray-200 rounded-lg p-3 sm:p-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center space-x-2">
-                      <Globe className="h-4 w-4 text-green-500" />
-                      <span className="text-sm sm:text-base font-medium text-gray-900">Content extracted</span>
-                    </div>
+              {isProUser ? (
+                !formData.websiteContent ? (
+                  <div className="space-y-3 sm:space-y-4">
+                    <input
+                      type="url"
+                      value={websiteUrl}
+                      onChange={(e) => setWebsiteUrl(e.target.value)}
+                      placeholder="https://example.com"
+                      className="w-full p-2 sm:p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 text-sm sm:text-base"
+                    />
                     <button
-                      onClick={removeWebsiteContent}
-                      className="p-1 text-gray-400 hover:text-red-500 touch-target"
+                      onClick={handleWebsiteScraping}
+                      disabled={!isValidUrl(websiteUrl) || isScrapingWebsite}
+                      className={`w-full p-2 sm:p-3 rounded-lg font-medium text-sm sm:text-base touch-target ${
+                        isValidUrl(websiteUrl) && !isScrapingWebsite
+                          ? 'bg-green-500 hover:bg-green-600 text-white'
+                          : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                      }`}
                     >
-                      <X className="h-4 w-4" />
+                      {isScrapingWebsite ? (
+                        <div className="flex items-center justify-center space-x-2">
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          <span>Extracting content...</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-center space-x-2">
+                          <Link className="h-4 w-4" />
+                          <span>Extract Content</span>
+                        </div>
+                      )}
                     </button>
                   </div>
-                  <p className="text-xs sm:text-sm text-gray-600">
-                    Website content has been successfully extracted and will be included in your course.
-                  </p>
+                ) : (
+                  <div className="border border-gray-200 rounded-lg p-3 sm:p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center space-x-2">
+                        <Globe className="h-4 w-4 text-green-500" />
+                        <span className="text-sm sm:text-base font-medium text-gray-900">Content extracted</span>
+                      </div>
+                      <button
+                        onClick={removeWebsiteContent}
+                        className="p-1 text-gray-400 hover:text-red-500 touch-target"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                    <p className="text-xs sm:text-sm text-gray-600">
+                      Website content has been successfully extracted and will be included in your course.
+                    </p>
+                  </div>
+                )
+              ) : (
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 sm:p-4">
+                  <div className="flex items-center space-x-2">
+                    <Crown className="h-4 w-4 text-yellow-600" />
+                    <span className="text-sm text-yellow-800">Upgrade to a paid plan to extract website content.</span>
+                  </div>
                 </div>
               )}
             </div>
