@@ -13,7 +13,6 @@ const CourseCreatorForm: React.FC<CourseCreatorFormProps> = ({ userId, onCourseC
   const [formData, setFormData] = useState({
     courseTitle: '',
     trackType: 'Corporate',
-    duration: '30',
     difficulty: 'Intermediate',
     objectives: '',
     topics: '',
@@ -122,7 +121,6 @@ const CourseCreatorForm: React.FC<CourseCreatorFormProps> = ({ userId, onCourseC
 Course Details:
 - Title: ${formData.courseTitle}
 - Track: ${formData.trackType}
-- Duration: ${formData.duration} minutes
 - Difficulty: ${formData.difficulty}
 - Learning Objectives: ${formData.objectives}
 - Key Topics: ${formData.topics}
@@ -135,7 +133,7 @@ Your role is to guide learners through this course content in an engaging, inter
 4. Encourage active participation
 5. Provide constructive feedback
 
-Keep sessions focused and within the specified duration. Make learning enjoyable and memorable.`;
+Make learning enjoyable and memorable.`;
   };
 
   const generateCoursePlan = () => {
@@ -144,13 +142,12 @@ Keep sessions focused and within the specified duration. Make learning enjoyable
     
     return {
       title: formData.courseTitle,
-      duration: parseInt(formData.duration),
       difficulty: formData.difficulty,
       objectives: objectives,
       modules: topics.map((topic, index) => ({
         id: index + 1,
         title: topic.trim(),
-        duration: Math.floor(parseInt(formData.duration) / topics.length),
+        duration: 0,
         content: `Interactive session covering ${topic.trim()}`
       })),
       trackType: formData.trackType
@@ -211,7 +208,6 @@ Keep sessions focused and within the specified duration. Make learning enjoyable
       setFormData({
         courseTitle: '',
         trackType: 'Corporate',
-        duration: '30',
         difficulty: 'Intermediate',
         objectives: '',
         topics: '',
@@ -296,23 +292,7 @@ Keep sessions focused and within the specified duration. Make learning enjoyable
           </div>
           
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-            <div>
-              <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
-                Duration (minutes) *
-              </label>
-              <select
-                value={formData.duration}
-                onChange={(e) => setFormData(prev => ({ ...prev, duration: e.target.value }))}
-                className="w-full p-2 sm:p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm sm:text-base touch-target"
-              >
-                <option value="15">15 minutes</option>
-                <option value="30">30 minutes</option>
-                <option value="45">45 minutes</option>
-                <option value="60">1 hour</option>
-                <option value="90">1.5 hours</option>
-                <option value="120">2 hours</option>
-              </select>
-            </div>
+            {/* Duration removed */}
             
             <div>
               <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">

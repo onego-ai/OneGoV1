@@ -160,6 +160,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onViewChange, user, onLog
               const Icon = item.icon;
               const isActive = activeView === item.id;
               const isUpgradeTab = item.isUpgrade;
+              const isCreateCourse = item.id === 'course-creator';
               
               return (
                 <li key={item.id}>
@@ -169,9 +170,11 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onViewChange, user, onLog
                       w-full flex items-center space-x-2 sm:space-x-3 px-2 sm:px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors
                       ${isUpgradeTab 
                         ? 'bg-gradient-to-r from-yellow-400 to-yellow-600 text-white shadow-lg hover:from-yellow-500 hover:to-yellow-700 transform hover:scale-105' 
-                        : isActive 
-                          ? 'bg-green-50 text-green-600 border border-green-200' 
-                          : 'text-gray-700 hover:bg-gray-50'
+                        : isActive
+                          ? 'bg-green-50 text-green-600 border border-green-200'
+                          : isCreateCourse
+                            ? 'bg-green-50 text-green-600 border border-green-200'
+                            : 'text-gray-700 hover:bg-gray-50'
                       }
                     `}
                   >

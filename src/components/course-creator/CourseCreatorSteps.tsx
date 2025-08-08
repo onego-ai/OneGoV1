@@ -45,8 +45,7 @@ const CourseCreatorSteps: React.FC<CourseCreatorStepsProps> = ({
       currentStep,
       formData,
       numberOfTopics: formData.numberOfTopics,
-      numberOfQuizzes: formData.numberOfQuizzes,
-      duration: formData.duration
+      numberOfQuizzes: formData.numberOfQuizzes
     });
 
     if (selectedTrack === 'Corporate') {
@@ -143,33 +142,33 @@ const CourseCreatorSteps: React.FC<CourseCreatorStepsProps> = ({
             {selectedTrack === 'Corporate' ? (
               // Corporate track: 4 steps
               <>
-                <div className={`flex items-center space-x-1 sm:space-x-2 ${currentStep >= 1 ? 'text-purple-600 font-medium' : 'text-gray-400'}`}>
+                <div className={`flex items-center space-x-1 sm:space-x-2 ${currentStep >= 1 ? 'text-green-600 font-medium' : 'text-gray-400'}`}>
                   <div className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full flex items-center justify-center text-xs ${
-                    currentStep >= 1 ? 'bg-purple-600 text-white' : 'bg-gray-200 text-gray-500'
+                    currentStep >= 1 ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-500'
                   }`}>
                     1
                   </div>
                   <span className="text-xs sm:text-sm">Course</span>
                 </div>
-                <div className={`flex items-center space-x-1 sm:space-x-2 ${currentStep >= 2 ? 'text-purple-600 font-medium' : 'text-gray-400'}`}>
+                <div className={`flex items-center space-x-1 sm:space-x-2 ${currentStep >= 2 ? 'text-green-600 font-medium' : 'text-gray-400'}`}>
                   <div className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full flex items-center justify-center text-xs ${
-                    currentStep >= 2 ? 'bg-purple-600 text-white' : 'bg-gray-200 text-gray-500'
+                    currentStep >= 2 ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-500'
                   }`}>
                     2
                   </div>
                   <span className="text-xs sm:text-sm">Learner</span>
                 </div>
-                <div className={`flex items-center space-x-1 sm:space-x-2 ${currentStep >= 3 ? 'text-purple-600 font-medium' : 'text-gray-400'}`}>
+                <div className={`flex items-center space-x-1 sm:space-x-2 ${currentStep >= 3 ? 'text-green-600 font-medium' : 'text-gray-400'}`}>
                   <div className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full flex items-center justify-center text-xs ${
-                    currentStep >= 3 ? 'bg-purple-600 text-white' : 'bg-gray-200 text-gray-500'
+                    currentStep >= 3 ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-500'
                   }`}>
                     3
                   </div>
                   <span className="text-xs sm:text-sm">Structure</span>
                 </div>
-                <div className={`flex items-center space-x-1 sm:space-x-2 ${currentStep >= 4 ? 'text-purple-600 font-medium' : 'text-gray-400'}`}>
+                <div className={`flex items-center space-x-1 sm:space-x-2 ${currentStep >= 4 ? 'text-green-600 font-medium' : 'text-gray-400'}`}>
                   <div className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full flex items-center justify-center text-xs ${
-                    currentStep >= 4 ? 'bg-purple-600 text-white' : 'bg-gray-200 text-gray-500'
+                    currentStep >= 4 ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-500'
                   }`}>
                     4
                   </div>
@@ -179,41 +178,41 @@ const CourseCreatorSteps: React.FC<CourseCreatorStepsProps> = ({
             ) : (
               // Educational track: 5 steps
               <>
-                <div className={`flex items-center space-x-1 sm:space-x-2 ${currentStep >= 1 ? 'text-purple-600 font-medium' : 'text-gray-400'}`}>
+                <div className={`flex items-center space-x-1 sm:space-x-2 ${currentStep >= 1 ? 'text-green-600 font-medium' : 'text-gray-400'}`}>
                   <div className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full flex items-center justify-center text-xs ${
-                    currentStep >= 1 ? 'bg-purple-600 text-white' : 'bg-gray-200 text-gray-500'
+                    currentStep >= 1 ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-500'
                   }`}>
                     1
                   </div>
                   <span className="text-xs sm:text-sm">Level</span>
                 </div>
-                <div className={`flex items-center space-x-1 sm:space-x-2 ${currentStep >= 2 ? 'text-purple-600 font-medium' : 'text-gray-400'}`}>
+                <div className={`flex items-center space-x-1 sm:space-x-2 ${currentStep >= 2 ? 'text-green-600 font-medium' : 'text-gray-400'}`}>
                   <div className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full flex items-center justify-center text-xs ${
-                    currentStep >= 2 ? 'bg-purple-600 text-white' : 'bg-gray-200 text-gray-500'
+                    currentStep >= 2 ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-500'
                   }`}>
                     2
                   </div>
                   <span className="text-xs sm:text-sm">Course</span>
                 </div>
-                <div className={`flex items-center space-x-1 sm:space-x-2 ${currentStep >= 3 ? 'text-purple-600 font-medium' : 'text-gray-400'}`}>
+                <div className={`flex items-center space-x-1 sm:space-x-2 ${currentStep >= 3 ? 'text-green-600 font-medium' : 'text-gray-400'}`}>
                   <div className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full flex items-center justify-center text-xs ${
-                    currentStep >= 3 ? 'bg-purple-600 text-white' : 'bg-gray-200 text-gray-500'
+                    currentStep >= 3 ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-500'
                   }`}>
                     3
                   </div>
                   <span className="text-xs sm:text-sm">Learner</span>
                 </div>
-                <div className={`flex items-center space-x-1 sm:space-x-2 ${currentStep >= 4 ? 'text-purple-600 font-medium' : 'text-gray-400'}`}>
+                <div className={`flex items-center space-x-1 sm:space-x-2 ${currentStep >= 4 ? 'text-green-600 font-medium' : 'text-gray-400'}`}>
                   <div className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full flex items-center justify-center text-xs ${
-                    currentStep >= 4 ? 'bg-purple-600 text-white' : 'bg-gray-200 text-gray-500'
+                    currentStep >= 4 ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-500'
                   }`}>
                     4
                   </div>
                   <span className="text-xs sm:text-sm">Structure</span>
                 </div>
-                <div className={`flex items-center space-x-1 sm:space-x-2 ${currentStep >= 5 ? 'text-purple-600 font-medium' : 'text-gray-400'}`}>
+                <div className={`flex items-center space-x-1 sm:space-x-2 ${currentStep >= 5 ? 'text-green-600 font-medium' : 'text-gray-400'}`}>
                   <div className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full flex items-center justify-center text-xs ${
-                    currentStep >= 5 ? 'bg-purple-600 text-white' : 'bg-gray-200 text-gray-500'
+                    currentStep >= 5 ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-500'
                   }`}>
                     5
                   </div>
@@ -221,12 +220,6 @@ const CourseCreatorSteps: React.FC<CourseCreatorStepsProps> = ({
                 </div>
               </>
             )}
-          </div>
-          <div className="mt-3 sm:mt-4">
-            <a href="#" className="text-xs sm:text-sm text-blue-600 hover:text-blue-800 flex items-center space-x-1">
-              <span>ⓘ</span>
-              <span>Video tutorial</span>
-            </a>
           </div>
         </div>
 

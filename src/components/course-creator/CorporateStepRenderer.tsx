@@ -42,8 +42,7 @@ const CorporateStepRenderer: React.FC<CorporateStepRendererProps> = ({
       currentStep,
       formData: {
         numberOfTopics: formData.numberOfTopics,
-        numberOfQuizzes: formData.numberOfQuizzes,
-        duration: formData.duration
+        numberOfQuizzes: formData.numberOfQuizzes
       }
     });
 
@@ -59,11 +58,6 @@ const CorporateStepRenderer: React.FC<CorporateStepRendererProps> = ({
         newFormData.numberOfQuizzes = 1;
         changed = true;
         console.log('Setting numberOfQuizzes to 1');
-      }
-      if (!formData.duration || formData.duration !== '30') {
-        newFormData.duration = '30';
-        changed = true;
-        console.log('Setting duration to 30');
       }
       if (changed) {
         console.log('Updating formData with defaults:', newFormData);
@@ -207,7 +201,7 @@ const CorporateStepRenderer: React.FC<CorporateStepRendererProps> = ({
             <textarea
               value={formData.courseDescription || ''}
               onChange={(e) => setFormData({ ...formData, courseDescription: e.target.value })}
-              placeholder="Example: I want to create a course on customer service skills for retail employees. The course should cover handling difficult customers, de-escalation techniques, and building customer relationships. Learners should be able to confidently handle customer complaints and improve customer satisfaction scores."
+              placeholder="Example: Customer service skills for retail employees - handling difficult customers, de-escalation techniques, and building relationships."
               className="w-full h-24 sm:h-32 p-3 sm:p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent resize-none text-sm sm:text-base"
             />
             <div className="mt-2 text-xs sm:text-sm text-gray-500">
@@ -228,7 +222,7 @@ const CorporateStepRenderer: React.FC<CorporateStepRendererProps> = ({
             <textarea
               value={formData.learnerDescription || ''}
               onChange={(e) => setFormData({ ...formData, learnerDescription: e.target.value })}
-              placeholder="Example: The learners are retail store employees aged 18-45, mostly entry-level with limited customer service experience. They need to learn how to handle customer complaints professionally, understand company policies, and improve their communication skills. Some may be nervous about dealing with angry customers."
+              placeholder="Example: Retail store employees, entry-level, limited customer service experience. Need to handle complaints professionally and improve communication skills."
               className="w-full h-24 sm:h-32 p-3 sm:p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent resize-none text-sm sm:text-base"
             />
             <div className="mt-2 text-xs sm:text-sm text-gray-500">
@@ -319,49 +313,14 @@ const CorporateStepRenderer: React.FC<CorporateStepRendererProps> = ({
                 )}
               </div>
 
-              <div className="space-y-3 sm:space-y-4">
-                <label className="block text-xs sm:text-sm font-medium text-gray-700 flex items-center">
-                  Course Duration
-                  {!isProUser && (
-                    <div className="flex items-center space-x-1 text-yellow-600 ml-2">
-                      <Crown className="h-3 w-3 sm:h-4 sm:w-4" />
-                      <span className="text-xs font-medium">Pro+</span>
-                    </div>
-                  )}
-                </label>
-                <select
-                  value={formData.duration || '30'}
-                  onChange={(e) => {
-                    if (isProUser) {
-                      setFormData({ ...formData, duration: e.target.value });
-                    }
-                  }}
-                  disabled={!isProUser}
-                  className={`w-full p-2 sm:p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 text-sm sm:text-base touch-target ${
-                    !isProUser ? 'bg-gray-100 cursor-not-allowed' : ''
-                  }`}
-                >
-                  <option value="15">15 minutes</option>
-                  <option value="30">30 minutes</option>
-                  <option value="45">45 minutes</option>
-                  <option value="60">60 minutes</option>
-                  <option value="90">90 minutes</option>
-                  <option value="120">2 hours</option>
-                </select>
-                {!isProUser && (
-                  <p className="text-xs text-gray-500">
-                    Upgrade to Pro to customize course structure
-                  </p>
-                )}
-              </div>
+              {/* Duration controls removed */}
             </div>
 
             <div className="mt-4 sm:mt-6 p-3 sm:p-4 bg-blue-50 rounded-lg">
               <h4 className="font-medium text-blue-800 mb-2 text-sm sm:text-base">Course Preview</h4>
               <p className="text-xs sm:text-sm text-blue-700">
                 Your course will have <strong>{formData.numberOfTopics || 3} main topics</strong> with{' '}
-                <strong>{formData.numberOfQuizzes || 1} knowledge checks</strong> and take approximately{' '}
-                <strong>{formData.duration || 30} minutes</strong> to complete.
+                <strong>{formData.numberOfQuizzes || 1} knowledge checks</strong>.
               </p>
               {!isProUser && (
                 <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
@@ -449,6 +408,7 @@ const CorporateStepRenderer: React.FC<CorporateStepRendererProps> = ({
                 <Globe className="h-4 w-4 sm:h-5 sm:w-5 mr-2 text-green-500" />
                 Website Content Extraction
               </h4>
+              <p className="text-xs sm:text-sm text-gray-500 -mt-2 mb-3">Please include the full URL with https (e.g., https://example.com).</p>
               
               {!formData.websiteContent ? (
                 <div className="space-y-3 sm:space-y-4">

@@ -308,7 +308,7 @@ const PricingPage: React.FC = () => {
             </div>
             
             <div className="bg-gray-100 rounded-lg p-3 mb-6">
-              <p className="text-sm font-medium text-gray-900">500 Credits per month + $0.20/extra credit</p>
+              <p className="text-sm font-medium text-gray-900">500 Credits per month</p>
             </div>
 
             <ul className="space-y-3 mb-6">
@@ -352,6 +352,10 @@ const PricingPage: React.FC = () => {
                 <Check className="h-4 w-4 text-green-500 mr-2 flex-shrink-0" />
                 <span className="text-sm text-gray-700">2 Admin Accounts</span>
               </li>
+              <li className="flex items-center">
+                <Check className="h-4 w-4 text-green-500 mr-2 flex-shrink-0" />
+                <span className="text-sm text-gray-700">PDF & Website Extraction</span>
+              </li>
             </ul>
           </div>
 
@@ -381,7 +385,7 @@ const PricingPage: React.FC = () => {
             </div>
             
             <div className="bg-gray-100 rounded-lg p-3 mb-6">
-              <p className="text-sm font-medium text-gray-900">1,500 Credits per month + $0.20/extra credit</p>
+              <p className="text-sm font-medium text-gray-900">1,500 Credits per month</p>
             </div>
 
             <ul className="space-y-3 mb-6">
@@ -404,6 +408,10 @@ const PricingPage: React.FC = () => {
               <li className="flex items-center">
                 <Check className="h-4 w-4 text-green-500 mr-2 flex-shrink-0" />
                 <span className="text-sm text-gray-700">5 Admin Accounts</span>
+              </li>
+              <li className="flex items-center">
+                <Check className="h-4 w-4 text-green-500 mr-2 flex-shrink-0" />
+                <span className="text-sm text-gray-700">PDF & Website Extraction</span>
               </li>
             </ul>
           </div>
@@ -429,7 +437,7 @@ const PricingPage: React.FC = () => {
             </div>
             
             <div className="bg-gray-100 rounded-lg p-3 mb-6">
-              <p className="text-sm font-medium text-gray-900">4,000 Credits per month + $0.20/extra credit</p>
+              <p className="text-sm font-medium text-gray-900">4,000 Credits per month</p>
             </div>
 
             <ul className="space-y-3 mb-6">
@@ -456,6 +464,10 @@ const PricingPage: React.FC = () => {
               <li className="flex items-center">
                 <Check className="h-4 w-4 text-green-500 mr-2 flex-shrink-0" />
                 <span className="text-sm text-gray-700">10 Admin Accounts</span>
+              </li>
+              <li className="flex items-center">
+                <Check className="h-4 w-4 text-green-500 mr-2 flex-shrink-0" />
+                <span className="text-sm text-gray-700">PDF & Website Extraction</span>
               </li>
             </ul>
           </div>
@@ -533,7 +545,7 @@ const PricingPage: React.FC = () => {
           
           <div className="flex flex-col md:flex-row items-center justify-center space-y-4 md:space-y-0 md:space-x-12">
             <div className="text-center">
-              <div className="text-4xl font-bold text-green-600 mb-2">$0.20</div>
+              <div className="text-4xl font-bold text-green-600 mb-2">Contact us</div>
               <p className="text-gray-600 text-sm">per additional credit</p>
             </div>
             

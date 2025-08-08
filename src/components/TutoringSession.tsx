@@ -6,7 +6,7 @@ import { sanitizeForTTS } from '@/utils/textUtils';
 import { chatMessageSchema, validateInput, sanitizeInput, containsSqlInjection } from '@/lib/validation';
 import { tutorRateLimiter, securityMiddleware, logSecurityEvent } from '@/lib/security';
 import { Mic, MicOff, Volume2, VolumeX, RotateCcw, X, Play, BookOpen, MessageCircle } from 'lucide-react';
-import SessionTimer from './SessionTimer';
+// Removed SessionTimer; no time limits
 import CourseReader from './CourseReader';
 import { 
   isIOS, 
@@ -80,7 +80,6 @@ const TutoringSession: React.FC<TutoringSessionProps> = ({ course, user, onEnd, 
   const [audioContextState, setAudioContextState] = useState<string>('not-initialized');
   const [showManualPlayButton, setShowManualPlayButton] = useState(false);
   const [sessionStartTime, setSessionStartTime] = useState<Date>(new Date());
-  const [timerActive, setTimerActive] = useState(false);
   const [totalInteractions, setTotalInteractions] = useState(0);
   const { getEnhancedCompanyContext } = useWebsiteContext();
 
@@ -403,7 +402,7 @@ const TutoringSession: React.FC<TutoringSessionProps> = ({ course, user, onEnd, 
       if (error) {
         console.error('Error initializing performance:', error);
       } else if (performance) {
-        setProgress(performance.progress || 0);
+        setProgress(((performance as any).progress as number) || 0);
       }
     } catch (error) {
       console.error('Error in initializePerformance:', error);
@@ -411,11 +410,64 @@ const TutoringSession: React.FC<TutoringSessionProps> = ({ course, user, onEnd, 
   };
 
   const generateWelcomeMessage = (enhancedContext?: EnhancedCompanyContext): WelcomeMessage => {
+    // Clean up course description to extract the actual topic
+    const cleanCourseDescription = (desc: string) => {
+      if (!desc) return 'the subject';
+      
+      // Remove common prompt phrases and course creation language
+      let cleaned = desc.toLowerCase()
+        .replace(/create\s+a\s+course\s+(?:on|about|regarding|concerning)\s+/gi, '')
+        .replace(/create\s+course\s+(?:on|about|regarding|concerning)\s+/gi, '')
+        .replace(/make\s+a\s+course\s+(?:on|about|regarding|concerning)\s+/gi, '')
+        .replace(/make\s+course\s+(?:on|about|regarding|concerning)\s+/gi, '')
+        .replace(/build\s+a\s+course\s+(?:on|about|regarding|concerning)\s+/gi, '')
+        .replace(/build\s+course\s+(?:on|about|regarding|concerning)\s+/gi, '')
+        .replace(/develop\s+a\s+course\s+(?:on|about|regarding|concerning)\s+/gi, '')
+        .replace(/develop\s+course\s+(?:on|about|regarding|concerning)\s+/gi, '')
+        .replace(/create\s+a\s+course/gi, '')
+        .replace(/create\s+course/gi, '')
+        .replace(/make\s+a\s+course/gi, '')
+        .replace(/make\s+course/gi, '')
+        .replace(/build\s+a\s+course/gi, '')
+        .replace(/build\s+course/gi, '')
+        .replace(/develop\s+a\s+course/gi, '')
+        .replace(/develop\s+course/gi, '')
+        .replace(/course\s+(?:on|about|regarding|concerning)\s+/gi, '')
+        .replace(/training\s+(?:on|about|regarding|concerning)\s+/gi, '')
+        .replace(/learning\s+(?:on|about|regarding|concerning)\s+/gi, '')
+        .replace(/about\s+/gi, '')
+        .replace(/regarding\s+/gi, '')
+        .replace(/concerning\s+/gi, '')
+        .replace(/in\s+/gi, '')
+        .replace(/the\s+/gi, '')
+        .trim();
+      
+      // Remove any remaining course-related words
+      const courseWords = ['course', 'training', 'learning', 'lesson', 'module', 'class', 'workshop', 'seminar'];
+      courseWords.forEach(word => {
+        cleaned = cleaned.replace(new RegExp(`\\b${word}\\b`, 'gi'), '');
+      });
+      
+      // Clean up extra spaces and normalize
+      cleaned = cleaned.replace(/\s+/g, ' ').trim();
+      
+      // If we end up with nothing meaningful, return a default
+      if (!cleaned || cleaned.length < 2) {
+        return 'the subject';
+      }
+      
+      return cleaned;
+    };
+
+    const toTitleCase = (str: string) =>
+      str.replace(/\w\S*/g, (txt) => txt.charAt(0).toUpperCase() + txt.slice(1));
+    
     const baseDisplayText = `Hello ${user.full_name?.split(' ')[0] || 'there'}! I'm **${course.course_plan?.tutorPersona || (course.track_type === 'Corporate' ? 'Nia' : 'Leo')}** from **ONEGO Learning**.`;
     const baseSpeechText = `Hello ${user.full_name?.split(' ')[0] || 'there'}! I'm **${course.course_plan?.tutorPersona || (course.track_type === 'Corporate' ? 'Nia' : 'Leo')}** from **ONE GO Learning**.`;
     
     if (course.track_type === 'Corporate') {
-      const goal = course.course_plan?.goal || 'workplace skills';
+      const cleanedCourse = cleanCourseDescription(course.course_plan?.courseDescription || course.course_plan?.title || '');
+      const goal = course.course_plan?.goal || cleanedCourse || 'this topic';
       
       // Build company context ONLY if we have valid website data AND company website is configured
       let companyContext = '';
@@ -448,21 +500,23 @@ const TutoringSession: React.FC<TutoringSessionProps> = ({ course, user, onEnd, 
         console.log('🔍 Skipping company context - validation failed');
       }
       
-      const courseDescription = course.course_plan?.courseDescription || goal;
-      const learnerDescription = course.course_plan?.learnerDescription || 'workplace professionals';
+      const courseDescription = cleanCourseDescription(course.course_plan?.courseDescription || goal);
+      const courseTitleDisplay = toTitleCase(courseDescription);
+      const learnerDescription = course.course_plan?.learnerDescription || 'professionals';
       
       return {
-        displayText: `${baseDisplayText}${companyContext}\n\n**Course Overview:**\n${courseDescription}\n\n**Designed for:** ${learnerDescription}\n\nWe're going to be learning about **${goal}**. I'll guide you through the key concepts and practical applications step by step.\n\n${user.full_name?.split(' ')[0] || 'there'}, are you ready to get started?`,
-        speechText: `${baseSpeechText}${companyContext}\n\nCourse Overview: ${courseDescription}\n\nDesigned for: ${learnerDescription}\n\nWe're going to be learning about ${goal}. I'll guide you through the key concepts and practical applications step by step.\n\n${user.full_name?.split(' ')[0] || 'there'}, are you ready to get started?`
+        displayText: `${baseDisplayText}${companyContext}\n\n**Course Overview:**\n${courseTitleDisplay}\n\nWe'll focus on **${courseTitleDisplay}** with practical, role-relevant examples. I'll guide you through key concepts and applications step by step.\n\n${user.full_name?.split(' ')[0] || 'there'}, are you ready to get started?`,
+        speechText: `${baseSpeechText}${companyContext}\n\nCourse Overview: ${courseDescription}\n\nWe'll focus on ${courseDescription} with practical, role-relevant examples. I'll guide you through key concepts and applications step by step.\n\n${user.full_name?.split(' ')[0] || 'there'}, are you ready to get started?`
       };
     } else {
       const objective = course.course_plan?.objective || course.course_title;
-      const courseDescription = course.course_plan?.courseDescription || objective;
+      const courseDescription = cleanCourseDescription(course.course_plan?.courseDescription || objective);
+      const courseTitleDisplay = toTitleCase(courseDescription);
       const learnerDescription = course.course_plan?.learnerDescription || 'students';
       
       return {
-        displayText: `Hi ${user.full_name?.split(' ')[0] || 'there'}! I'm **${course.course_plan?.tutorPersona || 'Leo'}** from **ONEGO Learning**.\n\n**Course Overview:**\n${courseDescription}\n\n**Designed for:** ${learnerDescription}\n\nToday we're going to be learning about **${objective}**. I've prepared a structured approach to help you master this subject.\n\n${user.full_name?.split(' ')[0] || 'there'}, are you ready to get started?`,
-        speechText: `Hi ${user.full_name?.split(' ')[0] || 'there'}! I'm ${course.course_plan?.tutorPersona || 'Leo'} from ONE GO Learning.\n\nCourse Overview: ${courseDescription}\n\nDesigned for: ${learnerDescription}\n\nToday we're going to be learning about ${objective}. I've prepared a structured approach to help you master this subject.\n\n${user.full_name?.split(' ')[0] || 'there'}, are you ready to get started?`
+        displayText: `Hi ${user.full_name?.split(' ')[0] || 'there'}! I'm **${course.course_plan?.tutorPersona || 'Leo'}** from **ONEGO Learning**.\n\n**Course Overview:**\n${courseTitleDisplay}\n\nToday we're going to be learning about **${objective}**. I've prepared a structured approach to help you master this subject.\n\n${user.full_name?.split(' ')[0] || 'there'}, are you ready to get started?`,
+        speechText: `Hi ${user.full_name?.split(' ')[0] || 'there'}! I'm ${course.course_plan?.tutorPersona || 'Leo'} from ONE GO Learning.\n\nCourse Overview: ${courseDescription}\n\nToday we're going to be learning about ${objective}. I've prepared a structured approach to help you master this subject.\n\n${user.full_name?.split(' ')[0] || 'there'}, are you ready to get started?`
       };
     }
   };
@@ -1003,9 +1057,7 @@ const TutoringSession: React.FC<TutoringSessionProps> = ({ course, user, onEnd, 
     setInputMessage('');
     setLoading(true);
 
-    if (!timerActive) {
-      setTimerActive(true);
-    }
+    // No timer activation
 
     try {
       // Simplified system prompt to avoid length issues
@@ -1153,7 +1205,7 @@ Keep responses between 40-100 words. Be engaging and use **bold** for key points
     setIsGeneratingVoice(false);
     setStreamingText('');
     setStreamingMessageIndex(-1);
-    setTimerActive(false);
+    // No timer
     
     localStorage.removeItem(`session_${course.id}`);
     setMessages([]);
@@ -1302,7 +1354,7 @@ Keep responses between 40-100 words. Be engaging and use **bold** for key points
               <span className="hidden sm:inline">Chat</span>
             </button>
             <button
-              onClick={() => setMode('reading')}
+              onClick={() => setMode('reading' as 'reading')}
               className={`px-2 sm:px-3 py-1 rounded-md text-xs sm:text-sm font-medium transition-colors ${
                 mode === 'reading'
                   ? 'bg-white text-gray-900 shadow-sm'
@@ -1314,11 +1366,7 @@ Keep responses between 40-100 words. Be engaging and use **bold** for key points
             </button>
           </div>
           
-          <SessionTimer
-            durationString={course.course_plan?.duration || 'No time limit (free flow)'}
-            onTimeUp={handleTimeUp}
-            isActive={timerActive}
-          />
+          {/* No SessionTimer; sessions are free-flow */}
           
           <button
             onClick={handleAudioToggle}

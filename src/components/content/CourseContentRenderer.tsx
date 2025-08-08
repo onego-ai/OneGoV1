@@ -6,6 +6,19 @@ interface CourseContentRendererProps {
 }
 
 const CourseContentRenderer: React.FC<CourseContentRendererProps> = ({ content, className = '' }) => {
+  // If content appears to be HTML (has tags), render as HTML
+  const looksLikeHtml = typeof content === 'string' && /<\/?(p|h1|h2|h3|ul|ol|li|strong|em|u|blockquote|code|span|div|br|a)[^>]*>/i.test(content);
+
+  if (looksLikeHtml) {
+    return (
+      <div className={`prose max-w-none ${className}`}>
+        <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-4 sm:p-6">
+          <div className="space-y-3 sm:space-y-4" dangerouslySetInnerHTML={{ __html: content }} />
+        </div>
+      </div>
+    );
+  }
+
   // Function to parse markdown-like content and render it properly
   const renderContent = (text: string) => {
     // Handle undefined or null content

@@ -75,9 +75,14 @@ const IndexContent: React.FC = () => {
     setActiveTab(profile?.role === 'Admin' ? 'courses' : 'my-courses');
   };
 
-  const handleCourseCreated = () => {
-    // Switch to courses tab after course creation
-    setActiveTab('courses');
+  const handleCourseCreated = (course: any) => {
+    // Redirect: Admins to course editor, others to courses list
+    if (profile?.role === 'Admin') {
+      setEditingCourse(course);
+      setActiveTab('course-editor');
+    } else {
+      setActiveTab('courses');
+    }
   };
 
   const handleEditCourse = (course: any) => {

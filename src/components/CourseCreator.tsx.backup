@@ -28,7 +28,8 @@ const CourseCreator: React.FC<CourseCreatorProps> = ({ userId, onCourseCreated, 
   // Function to generate course modules based on form data
   const generateCourseModules = async (formData: any, trackType: 'Corporate' | 'Educational') => {
     const numberOfTopics = formData.numberOfTopics || 3;
-    const topicDuration = 0;
+    const duration = parseInt(formData.duration || '30');
+    const topicDuration = Math.floor(duration / numberOfTopics);
     
     // Generate topics based on the course description
     const courseDescription = formData.courseDescription || '';
@@ -37,21 +38,18 @@ const CourseCreator: React.FC<CourseCreatorProps> = ({ userId, onCourseCreated, 
     // Create topic titles based on the course description
     const topicTitles = generateTopicTitles(courseDescription, numberOfTopics, trackType);
     
-    // Pre-pass all module titles to AI to improve uniqueness
-    const allTitles = [...topicTitles];
-    
     // Generate content for each module asynchronously
     const modules = [];
     for (let i = 0; i < topicTitles.length; i++) {
       const title = topicTitles[i];
-      const content = await generateModuleContent(title, courseDescription, learnerDescription, trackType, i + 1, numberOfTopics, allTitles);
+      const content = await generateModuleContent(title, courseDescription, learnerDescription, trackType, i + 1, numberOfTopics);
       
       modules.push({
         id: i + 1,
-      title: title,
-      duration: topicDuration,
+        title: title,
+        duration: topicDuration,
         content: content,
-      keyPoints: generateKeyPoints(title, courseDescription, trackType)
+        keyPoints: generateKeyPoints(title, courseDescription, trackType)
       });
     }
     
@@ -141,15 +139,15 @@ const CourseCreator: React.FC<CourseCreatorProps> = ({ userId, onCourseCreated, 
         
         // Create more specific and contextual topics
         const specificTopics = {
-      corporate: [
+          corporate: [
             `Introduction to ${capitalizedTopic}`,
             `Core ${capitalizedTopic} Principles`,
             `Practical ${capitalizedTopic} Applications`,
             `${capitalizedTopic} Best Practices`,
             `${capitalizedTopic} Implementation`,
             `${capitalizedTopic} Assessment & Next Steps`
-      ],
-      educational: [
+          ],
+          educational: [
             `Introduction to ${capitalizedTopic}`,
             `Core ${capitalizedTopic} Concepts`,
             `Practical ${capitalizedTopic} Examples`,
@@ -187,7 +185,7 @@ const CourseCreator: React.FC<CourseCreatorProps> = ({ userId, onCourseCreated, 
         for (let i = dynamicTitles.length; i < numberOfTopics; i++) {
           extendedTitles.push(`Advanced ${capitalizedTopic} Topic ${i - dynamicTitles.length + 1}`);
         }
-    return extendedTitles;
+      return extendedTitles;
     }
     
     return dynamicTitles;
@@ -195,9 +193,9 @@ const CourseCreator: React.FC<CourseCreatorProps> = ({ userId, onCourseCreated, 
 
   // Function to generate detailed module content with topics and subtopics
   // Function to generate AI-powered unique content using Groq API
-  const generateAIContent = async (moduleType: string, courseSubject: string, trackType: string, moduleNumber: number, totalModules: number, moduleTitle: string, moduleTitles: string[]): Promise<string> => {
+  const generateAIContent = async (moduleType: string, courseSubject: string, trackType: string, moduleNumber: number, totalModules: number): Promise<string> => {
     try {
-      console.log(`Calling AI service for ${moduleType} module about ${courseSubject}`);
+      console.log('Generating AI content for:', { moduleType, courseSubject, trackType, moduleNumber, totalModules });
       
       const response = await supabase.functions.invoke('generate-course-content', {
         body: {
@@ -206,34 +204,32 @@ const CourseCreator: React.FC<CourseCreatorProps> = ({ userId, onCourseCreated, 
           courseSubject,
           trackType,
           moduleNumber,
-          totalModules,
-          moduleTitle,
-          moduleTitles
+          totalModules
         }
       });
 
-      console.log('AI service response:', response);
+      console.log('AI content response:', response);
 
       if (response.error) {
-        console.error('AI service error:', response.error);
+        console.error('AI content generation error:', response.error);
         throw new Error(response.error.message);
       }
 
       if (!response.data || !response.data.content) {
         console.error('No content received from AI service');
-        throw new Error('No content received from AI service');
+        throw new Error('No content generated');
       }
 
-      console.log(`AI content received, length: ${response.data.content.length}`);
+      console.log('AI content generated successfully, length:', response.data.content.length);
       return response.data.content;
     } catch (error) {
       console.error('Error generating AI content:', error);
-      // Fallback to template content if AI generation fails
-      return '';
+      // Don't return empty string, let it fall through to template
+      throw error;
     }
   };
 
-  const generateModuleContent = async (title: string, courseDescription: string, learnerDescription: string, trackType: string, moduleNumber: number, totalModules: number, allModuleTitles?: string[]) => {
+  const generateModuleContent = async (title: string, courseDescription: string, learnerDescription: string, trackType: string, moduleNumber: number, totalModules: number) => {
     const context = trackType === 'Corporate' ? 'professional training' : 'educational learning';
     
     // Clean up course description to extract the actual topic
@@ -690,92 +686,509 @@ Each application area provides concrete steps and examples to help you develop p
         moduleType = 'assessment';
       }
 
-      console.log(`Generating AI content for module ${moduleNumber}: ${moduleType} - ${courseContext}`);
-      
-      const aiContent = await generateAIContent(moduleType, courseContext, trackType, moduleNumber, totalModules, title, allModuleTitles || []);
+      const aiContent = await generateAIContent(moduleType, courseContext, trackType, moduleNumber, totalModules);
       
       if (aiContent && aiContent.trim().length > 100) {
-        console.log(`AI content generated successfully for module ${moduleNumber}, length: ${aiContent.length}`);
+        console.log('Using AI-generated content for module', moduleNumber);
         return aiContent;
-    } else {
-        console.log(`AI content generation failed or returned empty content for module ${moduleNumber}`);
+      } else {
+        console.log('AI content too short or empty, using template');
+        throw new Error('AI content too short');
       }
     } catch (error) {
-      console.error(`AI content generation failed for module ${moduleNumber}, falling back to template:`, error);
+      console.error('AI content generation failed, falling back to template:', error);
     }
 
-        // Fallback to template content if AI generation fails
-    // Create unique fallback content based on module number and type
-    const createUniqueFallbackContent = (moduleNumber: number, moduleType: string) => {
-      const uniqueElements = [
-        `Module ${moduleNumber} focuses specifically on ${moduleType} aspects of ${courseContext}.`,
-        `This is the ${moduleNumber === 1 ? 'first' : moduleNumber === 2 ? 'second' : moduleNumber === 3 ? 'third' : `${moduleNumber}th`} module in your learning journey.`,
-        `Building on ${moduleNumber > 1 ? 'previous modules' : 'your existing knowledge'}, this module will ${moduleType === 'introduction' ? 'introduce you to' : moduleType === 'fundamentals' ? 'deepen your understanding of' : 'help you apply'} ${courseContext}.`,
-        `By the end of this module, you'll have ${moduleType === 'introduction' ? 'a solid foundation' : moduleType === 'fundamentals' ? 'advanced knowledge' : 'practical skills'} in ${courseContext}.`
-      ];
+    // Generate dynamic template content based on module type and course context
+    const generateDynamicTemplate = (moduleType: string, courseSubject: string, trackType: string, moduleNumber: number, totalModules: number) => {
+      const context = trackType === 'Corporate' ? 'professional training' : 'educational learning';
+      
+      // Get topic-specific content
+      const topicContent = generateTopicSpecificContent(moduleType, courseSubject, trackType);
+      
+      // Generate unique content based on module type
+      if (moduleType === 'introduction') {
+        return `${title}
 
+Overview
+${topicContent}
+
+What You'll Learn
+In this foundational module, you'll discover the essential principles and core concepts of ${courseSubject}. This module is specifically designed for ${learnerContext} and sets the stage for your comprehensive learning journey.
+
+Topic 1: Understanding ${courseSubject}
+- Core definitions and fundamental concepts
+
+${courseSubject} represents a dynamic field that encompasses various aspects of modern business and technology. Understanding the fundamental principles is crucial for anyone looking to excel in this area.
+
+- Real-world relevance and applications
+
+The knowledge you'll gain in this module is directly applicable to real-world scenarios. From practical applications to strategic decision-making, ${courseSubject} provides a framework for success in various professional contexts.
+
+- Essential terminology and key concepts
+
+Throughout this module, you'll encounter important terms and concepts specific to ${courseSubject}. Understanding these will help you communicate effectively with other professionals and build a strong foundation for advanced topics.
+
+Topic 2: Setting Up for Success
+- Prerequisites and preparation
+
+While no prior experience in ${courseSubject} is required, having a basic understanding of related concepts and a willingness to learn will be beneficial. Come prepared with an open mind and curiosity about the subject matter.
+
+- Learning objectives and outcomes
+
+By the end of this module, you'll be able to define key concepts in ${courseSubject}, explain their importance, identify common challenges, and outline the basic steps involved in applying these concepts effectively.
+
+- Success metrics and progress tracking
+
+Your progress will be measured through your ability to articulate core concepts, participate in discussions about real-world examples, and demonstrate understanding through practical exercises and assessments.
+
+Topic 3: Getting Started with ${courseSubject}
+- Your learning path and progression
+
+This module serves as the foundation for the entire course. The concepts you learn here will be built upon in subsequent modules, where you'll explore more advanced topics and practical applications.
+
+- Tools, resources, and support
+
+You'll have access to various tools and resources including case studies, industry reports, interactive exercises, and expert insights. We'll also provide templates and frameworks that you can use in your own projects.
+
+- Best practices and learning strategies
+
+To get the most out of this module, actively participate in discussions, complete all exercises, and try to apply the concepts to real-world examples. Don't hesitate to ask questions and seek clarification when needed.
+
+Module Summary
+This is module ${moduleNumber} of ${totalModules} in your comprehensive ${context} course. By the end of this module, you'll have a solid foundation to build upon in the upcoming sections. You'll understand the fundamental concepts of ${courseSubject} and be prepared to dive deeper into advanced topics in the following modules.`;
+      } else if (moduleType === 'fundamentals') {
+        return `${title}
+
+Overview
+Dive deep into the fundamental principles and methodologies related to ${courseSubject}. This module is crafted for ${learnerContext} and provides the essential knowledge you need to succeed.
+
+What You'll Learn
+In this comprehensive module, we'll explore the core concepts that form the foundation of ${courseSubject}.
+
+Topic 1: Core Principles of ${courseSubject}
+- Fundamental concepts and building blocks
+
+${topicContent}
+
+- Key methodologies and proven approaches
+
+We'll explore proven methodologies and frameworks that are essential for success in ${courseSubject}. These approaches provide structured ways to apply concepts, solve problems, and achieve your goals effectively.
+
+- Industry best practices and standards
+
+Industry best practices in ${courseSubject} include understanding current trends, following established guidelines, and maintaining high standards of quality and professionalism.
+
+Topic 2: Advanced Concepts in ${courseSubject}
+- Complex theories and deeper understanding
+
+Advanced concepts in ${courseSubject} involve understanding sophisticated theories, methodologies, and approaches that go beyond basic knowledge.
+
+- Critical thinking and analysis
+
+Critical thinking in ${courseSubject} involves questioning assumptions, analyzing information objectively, and making evidence-based decisions.
+
+- Problem-solving approaches and frameworks
+
+Systematic problem-solving involves breaking down complex challenges into manageable components, identifying root causes, and developing structured solutions.
+
+Topic 3: Practical Theory and Application
+- Theory to practice implementation
+
+Understanding how theoretical concepts apply in practice is crucial for success in ${courseSubject}. We'll examine real-world examples of how these concepts have been successfully applied.
+
+- Common scenarios and challenges
+
+You'll learn about common scenarios and challenges that arise in ${courseSubject}. Understanding these situations prepares you for the real-world challenges you'll face.
+
+- Decision-making frameworks and tools
+
+Decision-making frameworks help you evaluate options systematically and make better choices in ${courseSubject}.
+
+Module Summary
+Module ${moduleNumber} of ${totalModules} provides the theoretical foundation you need to apply ${courseSubject} effectively in practical situations. You'll have a deep understanding of core principles, methodologies, and frameworks that you can apply to real-world challenges.`;
+      } else if (moduleType === 'practical') {
+        return `${title}
+
+Overview
+Put theory into practice with hands-on applications of ${courseSubject}. This module is perfect for ${learnerContext} who want to see immediate results and develop practical skills.
+
+What You'll Learn
+In this hands-on module, you'll apply what you've learned about ${courseSubject} through real-world scenarios and exercises.
+
+Topic 1: Real-World Applications of ${courseSubject}
+- Case studies and practical examples
+
+We'll examine detailed case studies and real-world examples that demonstrate how ${courseSubject} principles are applied effectively across various industries and contexts.
+
+- Industry applications and implementations
+
+Learn from industry professionals who have successfully applied ${courseSubject} principles in their work. We'll explore how these concepts are used across different sectors.
+
+- Success stories and best practices
+
+Discover inspiring success stories of individuals and organizations that have effectively applied ${courseSubject} principles. These stories will provide motivation and practical insights.
+
+Topic 2: Hands-On Practice with ${courseSubject}
+- Step-by-step exercises and guided practice
+
+You'll work through structured exercises that guide you through the process of applying ${courseSubject} principles. These exercises are designed to build your confidence and competence.
+
+- Interactive scenarios and simulations
+
+Engage with interactive scenarios that simulate real-world challenges you might face when working with ${courseSubject}. These scenarios will help you develop problem-solving skills.
+
+- Problem-solving challenges and applications
+
+Work on specific problem-solving challenges that require you to apply your knowledge of ${courseSubject}. These challenges will test your understanding and help you develop practical skills.
+
+Topic 3: Implementation Strategies for ${courseSubject}
+- Action planning and execution
+
+Learn how to create actionable plans for implementing ${courseSubject} principles in your own projects or work. We'll provide frameworks and templates for planning and executing your ideas.
+
+- Common pitfalls and how to avoid them
+
+Understand common mistakes and pitfalls that people often encounter when applying ${courseSubject} principles. Learning from these mistakes will help you avoid them in your own journey.
+
+- Success metrics and performance measurement
+
+Learn how to define and measure success metrics for your ${courseSubject} initiatives. Understanding how to track progress and measure results is crucial for continuous improvement.
+
+Module Summary
+Module ${moduleNumber} of ${totalModules} transforms your theoretical knowledge into practical skills you can immediately apply in ${courseSubject}. You'll have hands-on experience with real-world applications and be prepared to implement these concepts in your own projects.`;
+      } else {
+        // Assessment or review module
+        return `${title}
+
+Overview
+Complete your learning journey by evaluating your understanding of ${courseSubject} and planning your next steps. This module is designed for ${learnerContext} to ensure lasting impact and continued growth.
+
+What You'll Learn
+In this final module, you'll assess your progress and create a plan for continued development in ${courseSubject}.
+
+Topic 1: Knowledge Assessment and Evaluation
+- Self-evaluation and progress review
+
+Assess your understanding of ${courseSubject} and reflect on what you've learned throughout the course. Identify areas of strength and opportunities for further improvement.
+
+- Skill validation and practical assessment
+
+Demonstrate your ${courseSubject} skills through practical assessments and real-world applications. Measure your ability to apply concepts effectively.
+
+- Gap analysis and improvement planning
+
+Identify areas for further development and create a roadmap for continued learning and skill enhancement in ${courseSubject}.
+
+Topic 2: Advanced Applications and Future Development
+- Continued learning and skill development
+
+Explore resources and opportunities for ongoing development in ${courseSubject}. Stay current with industry trends and emerging technologies.
+
+- Professional development and career advancement
+
+Learn how to leverage your ${courseSubject} knowledge for career growth and professional advancement. Build a strong foundation for future opportunities.
+
+- Community engagement and networking
+
+Connect with other professionals in the ${courseSubject} field. Build relationships and stay engaged with the broader community.
+
+Topic 3: Strategic Planning and Long-term Success
+- Goal setting and strategic planning
+
+Set clear goals for your continued development in ${courseSubject}. Create actionable plans for achieving your learning and career objectives.
+
+- Resource identification and utilization
+
+Identify the tools, resources, and support systems you need for continued success in ${courseSubject}. Build a comprehensive toolkit for ongoing learning.
+
+- Success measurement and continuous improvement
+
+Establish systems for measuring your progress and continuously improving your skills in ${courseSubject}. Create a framework for lifelong learning.
+
+Module Summary
+Module ${moduleNumber} of ${totalModules} helps you consolidate your learning and create a roadmap for continued success in ${courseSubject}. You'll have a clear understanding of your progress and a plan for future development.`;
+      }
+    };
+
+    // Use dynamic template generation
+    return generateDynamicTemplate(moduleType, courseContext, trackType, moduleNumber, totalModules);
+  };
+      
       return `${title}
 
 Overview
-${uniqueElements[0]} ${uniqueElements[1]}
+Dive deep into the fundamental principles and methodologies related to ${courseContext}. This module is crafted for ${learnerContext} and provides the essential knowledge you need to succeed.
 
 What You'll Learn
-${uniqueElements[2]} ${uniqueElements[3]}
+In this comprehensive module, we'll explore the core concepts that form the foundation of ${courseContext}.
 
-Topic 1: ${moduleType === 'introduction' ? 'Getting Started' : moduleType === 'fundamentals' ? 'Core Principles' : 'Practical Applications'}
-- Understanding ${courseContext} in context
+Topic 1: Core Principles
+- Fundamental concepts - The building blocks of ${courseContext}
 
-${courseContext} represents a dynamic field that requires both theoretical knowledge and practical application. This module will provide you with the essential ${moduleType === 'introduction' ? 'foundations' : moduleType === 'fundamentals' ? 'principles' : 'applications'} you need to succeed.
+${fundamentalsContent}
 
-- Key concepts and terminology
+- Key methodologies - Proven approaches and techniques
 
-You'll learn important terms and concepts specific to ${courseContext}, including industry-standard terminology and fundamental principles that form the basis of this field.
+We'll explore proven methodologies and frameworks that are essential for success in ${courseContext}. These approaches provide structured ways to apply concepts, solve problems, and achieve your goals effectively.
 
-- Real-world relevance
+Specific methodologies you'll learn include:
+- Systematic analysis techniques for understanding complex problems
+- Structured decision-making processes for evaluating options
+- Research and information gathering methods
+- Solution development and implementation frameworks
+- Evaluation and continuous improvement approaches
 
-The knowledge you gain in this module is directly applicable to real-world situations in ${courseContext}. You'll understand how these concepts are used in professional settings and practical scenarios.
+- Best practices - Industry standards and recommendations
 
-Topic 2: ${moduleType === 'introduction' ? 'Building Your Foundation' : moduleType === 'fundamentals' ? 'Advanced Concepts' : 'Implementation Strategies'}
-- Essential ${moduleType === 'introduction' ? 'prerequisites' : moduleType === 'fundamentals' ? 'methodologies' : 'techniques'}
+Industry best practices in ${courseContext} include understanding current trends, following established guidelines, and maintaining high standards of quality and professionalism. We'll examine real-world examples and case studies that demonstrate these practices in action.
 
-This section covers the ${moduleType === 'introduction' ? 'basic requirements' : moduleType === 'fundamentals' ? 'advanced approaches' : 'practical methods'} you need to understand ${courseContext} effectively.
+Key best practices include:
+- Staying current with industry developments and emerging trends
+- Following established protocols and quality standards
+- Maintaining ethical practices and professional integrity
+- Continuously improving skills and knowledge
+- Building strong professional networks and relationships
 
-- Learning objectives
+Topic 2: Advanced Concepts
+- Complex theories - Deeper understanding of ${courseContext}
 
-By the end of this module, you'll be able to ${moduleType === 'introduction' ? 'define and explain' : moduleType === 'fundamentals' ? 'analyze and evaluate' : 'implement and apply'} key concepts in ${courseContext}.
+Advanced concepts in ${courseContext} involve understanding sophisticated theories, methodologies, and approaches that go beyond basic knowledge. You'll explore how these concepts can be applied to solve complex problems and achieve superior results.
 
-- Success indicators
+Advanced topics include:
+- Complex problem-solving methodologies and frameworks
+- Advanced analytical techniques and tools
+- Strategic thinking and long-term planning approaches
+- Innovation and creative problem-solving methods
+- Integration of multiple concepts and interdisciplinary approaches
 
-Your progress will be measured through your ability to ${moduleType === 'introduction' ? 'articulate basic concepts' : moduleType === 'fundamentals' ? 'demonstrate understanding' : 'apply practical skills'} related to ${courseContext}.
+- Critical thinking - How to analyze and evaluate ${courseContext}
 
-Topic 3: ${moduleType === 'introduction' ? 'Moving Forward' : moduleType === 'fundamentals' ? 'Practical Integration' : 'Advanced Applications'}
-- Your learning path
+Critical thinking in ${courseContext} involves questioning assumptions, analyzing information objectively, and making evidence-based decisions. You'll learn frameworks for evaluating options, assessing risks, and making informed choices.
 
-This module ${moduleNumber === 1 ? 'establishes the foundation' : moduleNumber === 2 ? 'builds upon your introduction' : 'integrates your knowledge'} for the rest of your ${courseContext} journey.
+Critical thinking frameworks include:
+- Systematic analysis of problems and opportunities
+- Evidence-based decision making processes
+- Risk assessment and mitigation strategies
+- Logical reasoning and argument evaluation
+- Creative thinking and alternative solution generation
 
-- Tools and resources
+- Problem-solving approaches - Systematic methods for challenges
 
-You'll have access to ${moduleType === 'introduction' ? 'basic learning materials' : moduleType === 'fundamentals' ? 'advanced resources' : 'practical tools'} specifically designed for ${courseContext} learners.
+Systematic problem-solving involves breaking down complex challenges into manageable components, identifying root causes, and developing structured solutions. We'll explore various problem-solving frameworks and their applications in ${courseContext}.
 
-- Best practices
+Problem-solving methodologies include:
+- Root cause analysis and problem identification
+- Solution brainstorming and evaluation techniques
+- Implementation planning and execution strategies
+- Monitoring and evaluation of outcomes
+- Continuous improvement and iteration processes
 
-To maximize your learning in this module, focus on ${moduleType === 'introduction' ? 'understanding core concepts' : moduleType === 'fundamentals' ? 'applying theoretical knowledge' : 'practicing real-world scenarios'} in ${courseContext}.
+Topic 3: Practical Theory
+- Theory to practice - How concepts apply in real situations
+
+Understanding how theoretical concepts apply in practice is crucial for success in ${courseContext}. We'll examine real-world examples of how these concepts have been successfully applied, including both successes and failures, to provide valuable lessons.
+
+Practical applications include:
+- Real-world case studies and success stories
+- Common challenges and how they were overcome
+- Lessons learned from failures and setbacks
+- Best practices from industry leaders and experts
+- Practical tips and strategies for implementation
+
+- Common scenarios - Typical situations you'll encounter
+
+You'll learn about common scenarios and challenges that arise in ${courseContext}. Understanding these situations prepares you for the real-world challenges you'll face and helps you develop effective strategies for handling them.
+
+Common scenarios include:
+- Typical challenges and obstacles in the field
+- Standard procedures and protocols
+- Common mistakes and how to avoid them
+- Crisis management and problem resolution
+- Professional development and career advancement opportunities
+
+- Decision-making frameworks - Tools for making informed choices
+
+Decision-making frameworks help you evaluate options systematically and make better choices in ${courseContext}. We'll explore frameworks for evaluating opportunities, assessing risks, and making strategic decisions.
+
+Decision-making tools include:
+- Structured evaluation criteria and scoring systems
+- Risk assessment and mitigation frameworks
+- Cost-benefit analysis and ROI calculations
+- Stakeholder analysis and impact assessment
+- Implementation planning and timeline development
 
 Module Summary
-This is module ${moduleNumber} of ${totalModules} in your comprehensive ${context} course. You've now ${moduleType === 'introduction' ? 'established a solid foundation' : moduleType === 'fundamentals' ? 'developed advanced understanding' : 'gained practical experience'} in ${courseContext} and are ready to ${moduleNumber < totalModules ? 'continue to the next module' : 'apply your knowledge in real-world situations'}.`;
-    };
+Module ${moduleNumber} of ${totalModules} provides the theoretical foundation you need to apply ${courseContext} effectively in practical situations. You'll have a deep understanding of core principles, methodologies, and frameworks that you can apply to real-world challenges.`;
+    } else if (title.toLowerCase().includes('practical') || title.toLowerCase().includes('application')) {
+      const practicalContent = generateTopicSpecificContent('practical', courseContext, trackType);
+      
+      return `${title}
 
-         // Determine module type for fallback content
-         let fallbackModuleType = 'introduction';
-         if (title.toLowerCase().includes('core') || title.toLowerCase().includes('concept')) {
-           fallbackModuleType = 'fundamentals';
-         } else if (title.toLowerCase().includes('practical') || title.toLowerCase().includes('application')) {
-           fallbackModuleType = 'practical';
-         } else if (title.toLowerCase().includes('assessment') || title.toLowerCase().includes('review')) {
-           fallbackModuleType = 'assessment';
-         }
-         
-         return createUniqueFallbackContent(moduleNumber, fallbackModuleType);
+Overview
+Put theory into practice with hands-on applications of ${courseContext}. This module is perfect for ${learnerContext} who want to see immediate results and develop practical skills.
+
+What You'll Learn
+In this hands-on module, you'll apply what you've learned about ${courseContext} through real-world scenarios and exercises.
+
+Topic 1: Real-World Applications
+- Case studies - Real examples of ${courseContext} in action
+
+We'll examine detailed case studies and real-world examples that demonstrate how ${courseContext} principles are applied effectively. You'll analyze strategies, challenges, and key success factors from various contexts and industries.
+
+Specific case studies include:
+- Success stories from leading companies and organizations
+- Real-world problem-solving scenarios and solutions
+- Industry-specific applications and adaptations
+- Lessons learned from both successes and failures
+- Best practices from recognized experts and practitioners
+
+- Industry examples - How professionals use ${courseContext}
+
+Learn from industry professionals who have successfully applied ${courseContext} principles in their work. We'll explore how these concepts are used across different industries and understand the unique challenges and opportunities in each sector.
+
+Industry applications include:
+- Technology sector implementations and innovations
+- Healthcare and medical applications
+- Financial services and banking applications
+- Education and training implementations
+- Manufacturing and production applications
+- Service industry adaptations and uses
+
+- Success stories - Inspiring examples of effective implementation
+
+Discover inspiring success stories of individuals and organizations that have effectively applied ${courseContext} principles. These stories will provide motivation and practical insights into the journey of mastering these skills.
+
+Success factors include:
+- Clear goal setting and strategic planning
+- Effective team collaboration and communication
+- Continuous learning and skill development
+- Adaptability and problem-solving abilities
+- Strong leadership and project management
+
+Topic 2: Hands-On Practice
+- Step-by-step exercises - Guided practice with ${courseContext}
+
+You'll work through structured exercises that guide you through the process of applying ${courseContext} principles. These exercises are designed to build your confidence and competence through practical application.
+
+Practical exercises include:
+- Project planning and execution simulations
+- Problem-solving scenarios and case studies
+- Tool and technology hands-on practice
+- Team collaboration and communication exercises
+- Performance evaluation and feedback sessions
+
+- Interactive scenarios - Simulated real-world situations
+
+Engage with interactive scenarios that simulate real-world challenges you might face when working with ${courseContext}. These scenarios will help you develop problem-solving skills and decision-making abilities.
+
+Scenario types include:
+- Crisis management and emergency response situations
+- Complex project challenges and constraints
+- Team conflict resolution and collaboration
+- Resource allocation and budget management
+- Stakeholder communication and negotiation
+
+- Problem-solving challenges - Apply your knowledge to solve problems
+
+Work on specific problem-solving challenges that require you to apply your knowledge of ${courseContext}. These challenges will test your understanding and help you develop practical skills.
+
+Challenge categories include:
+- Technical problems and troubleshooting
+- Strategic planning and decision-making
+- Process improvement and optimization
+- Innovation and creative problem-solving
+- Risk assessment and mitigation
+
+Topic 3: Implementation Strategies
+- Action planning - How to implement ${courseContext} in your work
+
+Learn how to create actionable plans for implementing ${courseContext} principles in your own projects or work. We'll provide frameworks and templates for planning and executing your ideas effectively.
+
+Implementation strategies include:
+- Project planning and timeline development
+- Resource allocation and budget planning
+- Risk assessment and contingency planning
+- Stakeholder engagement and communication plans
+- Performance monitoring and evaluation systems
+
+- Common pitfalls - What to avoid when applying ${courseContext}
+
+Understand common mistakes and pitfalls that people often encounter when applying ${courseContext} principles. Learning from these mistakes will help you avoid them in your own journey.
+
+Common pitfalls include:
+- Insufficient planning and preparation
+- Poor communication and stakeholder management
+- Lack of proper training and skill development
+- Resistance to change and adaptation
+- Inadequate monitoring and evaluation
+
+- Success metrics - How to measure your progress and results
+
+Learn how to define and measure success metrics for your ${courseContext} initiatives. Understanding how to track progress and measure results is crucial for continuous improvement and demonstrating value.
+
+Key metrics include:
+- Performance indicators and KPIs
+- Quality measures and standards
+- Efficiency and productivity metrics
+- Customer satisfaction and feedback
+- Financial impact and ROI calculations
+
+Module Summary
+Module ${moduleNumber} of ${totalModules} transforms your theoretical knowledge into practical skills you can immediately apply in ${courseContext}. You'll have hands-on experience with real-world applications and be prepared to implement these concepts in your own projects.`;
+    } else if (title.toLowerCase().includes('assessment') || title.toLowerCase().includes('review')) {
+      return `${title}
+
+Overview
+Complete your learning journey by evaluating your understanding of ${courseContext} and planning your next steps. This module is designed for ${learnerContext} to ensure lasting impact and continued growth.
+
+What You'll Learn
+In this final module, you'll assess your progress and create a plan for continued development in ${courseContext}.
+
+Topic 1: Knowledge Assessment
+- Self-evaluation - Assess your understanding of ${courseContext}
+- Progress review - Reflect on what you've learned
+- Gap analysis - Identify areas for further improvement
+
+Topic 2: Skill Validation
+- Practical assessment - Demonstrate your ${courseContext} skills
+- Performance evaluation - Measure your application of concepts
+- Feedback integration - Use feedback to improve your approach
+
+Topic 3: Future Development
+- Continued learning - Resources for ongoing development
+- Advanced topics - Next steps in your ${courseContext} journey
+- Professional development - How to stay current and grow
+
+Module Summary
+Module ${moduleNumber} of ${totalModules} helps you consolidate your learning and create a roadmap for continued success in ${courseContext}.`;
+    } else {
+      return `${title}
+
+Overview
+Explore comprehensive aspects of ${courseContext} in this detailed module. We'll cover essential topics specifically tailored for ${learnerContext} and build upon your previous knowledge.
+
+What You'll Learn
+In this module, we'll dive deep into advanced concepts and practical applications of ${courseContext}.
+
+Topic 1: Advanced Concepts
+- Complex theories - Advanced understanding of ${courseContext}
+- Specialized techniques - Expert-level approaches
+- Innovation and trends - Latest developments in ${courseContext}
+
+Topic 2: Specialized Applications
+- Industry-specific uses - How ${courseContext} applies in different fields
+- Custom solutions - Tailored approaches for specific needs
+- Integration strategies - How to combine ${courseContext} with other skills
+
+Topic 3: Mastery and Excellence
+- Expert-level skills - Achieving mastery in ${courseContext}
+- Leadership applications - Using ${courseContext} to lead and influence
+- Continuous improvement - Strategies for ongoing development
+
+Module Summary
+Module ${moduleNumber} of ${totalModules} prepares you for advanced applications and leadership roles in ${courseContext}.`;
+    }
   };
 
   // Function to generate detailed key points for each module
@@ -1013,8 +1426,8 @@ This is module ${moduleNumber} of ${totalModules} in your comprehensive ${contex
     const courseDescription = cleanCourseDescription(formData.courseDescription || '');
     const learnerDescription = formData.learnerDescription || '';
     const numberOfTopics = formData.numberOfTopics || 3;
-    const topicDuration = 0;
     const numberOfQuizzes = formData.numberOfQuizzes || 1;
+    const duration = formData.duration || '30';
     const pdfContent = formData.pdfContent || '';
     const websiteContent = formData.websiteContent || '';
 
@@ -1026,6 +1439,7 @@ COURSE DETAILS:
 - Target Learners: ${learnerDescription}
 - Number of Topics: ${numberOfTopics}
 - Number of Quizzes: ${numberOfQuizzes}
+- Session Duration: ${duration} minutes
 ${pdfContent ? `- PDF Content: ${pdfContent.substring(0, 200)}...` : ''}
 ${websiteContent ? `- Website Content: ${websiteContent.substring(0, 200)}...` : ''}
 
@@ -1061,6 +1475,7 @@ COURSE DETAILS:
 - Target Learners: ${learnerDescription}
 - Number of Topics: ${numberOfTopics}
 - Number of Quizzes: ${numberOfQuizzes}
+- Session Duration: ${duration} minutes
 ${pdfContent ? `- PDF Content: ${pdfContent.substring(0, 200)}...` : ''}
 ${websiteContent ? `- Website Content: ${websiteContent.substring(0, 200)}...` : ''}
 
@@ -1122,7 +1537,7 @@ Remember to focus on ${courseDescription} while building a strong foundation in 
         ...formData,
         tutorPersona: tutorPersona,
         title: courseTitle,
-        duration: 0, // Default duration per module
+        duration: parseInt(formData.duration || '30'),
         modules: courseModules,
         trackType: selectedTrack,
         courseDescription: formData.courseDescription,
@@ -1171,11 +1586,8 @@ Remember to focus on ${courseDescription} while building a strong foundation in 
 
       toast({
         title: "Course Created!",
-        description: "Redirecting to the course editor...",
+        description: "Your course has been created as a draft. You can test it and publish it when ready. (1 credit will be consumed automatically)",
       });
-
-      // Immediately notify parent so it can redirect
-      onCourseCreated(courseData);
 
     } catch (error: any) {
       console.error('Course creation error:', error);

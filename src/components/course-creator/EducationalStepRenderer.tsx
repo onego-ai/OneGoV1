@@ -46,7 +46,6 @@ const EducationalStepRenderer: React.FC<EducationalStepRendererProps> = ({
       formData: {
         numberOfTopics: formData.numberOfTopics,
         numberOfQuizzes: formData.numberOfQuizzes,
-        duration: formData.duration
       }
     });
 
@@ -62,11 +61,6 @@ const EducationalStepRenderer: React.FC<EducationalStepRendererProps> = ({
         newFormData.numberOfQuizzes = 1;
         changed = true;
         console.log('Setting numberOfQuizzes to 1');
-      }
-      if (!formData.duration || formData.duration !== '30') {
-        newFormData.duration = '30';
-        changed = true;
-        console.log('Setting duration to 30');
       }
       if (changed) {
         console.log('Updating formData with defaults:', newFormData);
@@ -266,7 +260,7 @@ const EducationalStepRenderer: React.FC<EducationalStepRendererProps> = ({
             <Label htmlFor="courseDescription" className="text-sm sm:text-base">Describe Your Course</Label>
             <Textarea
               id="courseDescription"
-              placeholder="What is your course about? What will students learn?"
+              placeholder="Example: Introduction to algebra - solving equations, variables, and basic problem-solving techniques."
               value={formData.courseDescription || ''}
               onChange={(e) => onFormDataChange({ ...formData, courseDescription: e.target.value })}
               className="mt-2 text-sm sm:text-base"
@@ -283,7 +277,7 @@ const EducationalStepRenderer: React.FC<EducationalStepRendererProps> = ({
             <Label htmlFor="learnerDescription" className="text-sm sm:text-base">Describe Your Learner</Label>
             <Textarea
               id="learnerDescription"
-              placeholder="Who are your students? What's their background and experience level?"
+              placeholder="Example: High school students, beginners to algebra, need to understand basic mathematical concepts and problem-solving."
               value={formData.learnerDescription || ''}
               onChange={(e) => onFormDataChange({ ...formData, learnerDescription: e.target.value })}
               className="mt-2 text-sm sm:text-base"
@@ -374,49 +368,14 @@ const EducationalStepRenderer: React.FC<EducationalStepRendererProps> = ({
                 )}
               </div>
 
-              <div className="space-y-3 sm:space-y-4">
-                <label className="block text-xs sm:text-sm font-medium text-gray-700 flex items-center">
-                  Course Duration
-                  {!isProUser && (
-                    <div className="flex items-center space-x-1 text-yellow-600 ml-2">
-                      <Crown className="h-3 w-3 sm:h-4 sm:w-4" />
-                      <span className="text-xs font-medium">Pro+</span>
-                    </div>
-                  )}
-                </label>
-                <select
-                  value={formData.duration || '30'}
-                  onChange={(e) => {
-                    if (isProUser) {
-                      onFormDataChange({ ...formData, duration: e.target.value });
-                    }
-                  }}
-                  disabled={!isProUser}
-                  className={`w-full p-2 sm:p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 text-sm sm:text-base touch-target ${
-                    !isProUser ? 'bg-gray-100 cursor-not-allowed' : ''
-                  }`}
-                >
-                  <option value="15">15 minutes</option>
-                  <option value="30">30 minutes</option>
-                  <option value="45">45 minutes</option>
-                  <option value="60">60 minutes</option>
-                  <option value="90">90 minutes</option>
-                  <option value="120">2 hours</option>
-                </select>
-                {!isProUser && (
-                  <p className="text-xs text-gray-500">
-                    Upgrade to Pro to customize course structure
-                  </p>
-                )}
-              </div>
+              {/* Duration controls removed */}
             </div>
 
             <div className="mt-4 sm:mt-6 p-3 sm:p-4 bg-blue-50 rounded-lg">
               <h4 className="font-medium text-blue-800 mb-2 text-sm sm:text-base">Course Preview</h4>
               <p className="text-xs sm:text-sm text-blue-700">
                 Your course will have <strong>{formData.numberOfTopics || 3} main topics</strong> with{' '}
-                <strong>{formData.numberOfQuizzes || 1} knowledge checks</strong> and take approximately{' '}
-                <strong>{formData.duration || 30} minutes</strong> to complete.
+                <strong>{formData.numberOfQuizzes || 1} knowledge checks</strong>.
               </p>
               {!isProUser && (
                 <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
@@ -529,52 +488,65 @@ const EducationalStepRenderer: React.FC<EducationalStepRendererProps> = ({
                   <span>Extract Website Content</span>
                 </CardTitle>
                 <CardDescription>
-                  Enter a website URL to extract relevant content for your course (1 credit per extraction)
+                  {isProUser
+                    ? 'Enter a website URL to extract relevant content for your course (1 credit per extraction)'
+                    : 'Website content extraction is available for Standard, Pro, Business, and Enterprise users'}
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  <div className="flex space-x-2">
-                    <Input
-                      placeholder="https://example.com"
-                      value={websiteUrl}
-                      onChange={(e) => setWebsiteUrl(e.target.value)}
-                      className="flex-1"
-                    />
-                    <Button
-                      onClick={handleWebsiteScraping}
-                      disabled={isScrapingWebsite || !websiteUrl}
-                    >
-                      {isScrapingWebsite ? (
-                        <>
-                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                          Extracting...
-                        </>
-                      ) : (
-                        <>
-                          <Link className="h-4 w-4 mr-2" />
-                          Extract
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                  {formData.websiteContent && (
-                    <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                      <div className="flex items-center justify-between">
-                        <p className="text-sm text-green-800">
-                          <strong>Website Content Extracted:</strong> {formData.websiteUrl}
-                        </p>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={removeWebsiteContent}
-                        >
-                          Remove
-                        </Button>
-                      </div>
+                {isProUser ? (
+                  <div className="space-y-4">
+                    <div className="flex space-x-2">
+                      <Input
+                        placeholder="https://example.com"
+                        value={websiteUrl}
+                        onChange={(e) => setWebsiteUrl(e.target.value)}
+                        className="flex-1"
+                      />
+                      <Button
+                        onClick={handleWebsiteScraping}
+                        disabled={isScrapingWebsite || !websiteUrl}
+                      >
+                        {isScrapingWebsite ? (
+                          <>
+                            <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                            Extracting...
+                          </>
+                        ) : (
+                          <>
+                            <Link className="h-4 w-4 mr-2" />
+                            Extract
+                          </>
+                        )}
+                      </Button>
                     </div>
-                  )}
-                </div>
+                    {formData.websiteContent && (
+                      <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                        <div className="flex items-center justify-between">
+                          <p className="text-sm text-green-800">
+                            <strong>Website Content Extracted:</strong> {formData.websiteUrl}
+                          </p>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={removeWebsiteContent}
+                          >
+                            Remove
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                    <div className="flex items-center space-x-2">
+                      <AlertCircle className="h-4 w-4 text-yellow-600" />
+                      <span className="text-sm text-yellow-800">
+                        Upgrade to a paid plan to access Website Content Extraction
+                      </span>
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
 

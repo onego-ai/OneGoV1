@@ -20,7 +20,7 @@ interface ContentRendererProps {
   profile: any;
   user: any;
   onStartSession: (course: any) => void;
-  onCourseCreated: () => void;
+  onCourseCreated: (course: any) => void;
   onEditCourse: (course: any) => void;
   onBackFromEditor: () => void;
   editingCourse: any;

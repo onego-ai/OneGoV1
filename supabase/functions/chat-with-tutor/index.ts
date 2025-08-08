@@ -55,6 +55,55 @@ serve(async (req) => {
       );
     }
 
+    // Clean up course description to extract the actual topic
+    const cleanCourseDescription = (desc: string) => {
+      if (!desc) return 'the course topic';
+      
+      // Remove common prompt phrases and course creation language
+      let cleaned = desc.toLowerCase()
+        .replace(/create\s+a\s+course\s+(?:on|about|regarding|concerning)\s+/gi, '')
+        .replace(/create\s+course\s+(?:on|about|regarding|concerning)\s+/gi, '')
+        .replace(/make\s+a\s+course\s+(?:on|about|regarding|concerning)\s+/gi, '')
+        .replace(/make\s+course\s+(?:on|about|regarding|concerning)\s+/gi, '')
+        .replace(/build\s+a\s+course\s+(?:on|about|regarding|concerning)\s+/gi, '')
+        .replace(/build\s+course\s+(?:on|about|regarding|concerning)\s+/gi, '')
+        .replace(/develop\s+a\s+course\s+(?:on|about|regarding|concerning)\s+/gi, '')
+        .replace(/develop\s+course\s+(?:on|about|regarding|concerning)\s+/gi, '')
+        .replace(/create\s+a\s+course/gi, '')
+        .replace(/create\s+course/gi, '')
+        .replace(/make\s+a\s+course/gi, '')
+        .replace(/make\s+course/gi, '')
+        .replace(/build\s+a\s+course/gi, '')
+        .replace(/build\s+course/gi, '')
+        .replace(/develop\s+a\s+course/gi, '')
+        .replace(/develop\s+course/gi, '')
+        .replace(/course\s+(?:on|about|regarding|concerning)\s+/gi, '')
+        .replace(/training\s+(?:on|about|regarding|concerning)\s+/gi, '')
+        .replace(/learning\s+(?:on|about|regarding|concerning)\s+/gi, '')
+        .replace(/about\s+/gi, '')
+        .replace(/regarding\s+/gi, '')
+        .replace(/concerning\s+/gi, '')
+        .replace(/in\s+/gi, '')
+        .replace(/the\s+/gi, '')
+        .trim();
+      
+      // Remove any remaining course-related words
+      const courseWords = ['course', 'training', 'learning', 'lesson', 'module', 'class', 'workshop', 'seminar'];
+      courseWords.forEach(word => {
+        cleaned = cleaned.replace(new RegExp(`\\b${word}\\b`, 'gi'), '');
+      });
+      
+      // Clean up extra spaces and normalize
+      cleaned = cleaned.replace(/\s+/g, ' ').trim();
+      
+      // If we end up with nothing meaningful, return a default
+      if (!cleaned || cleaned.length < 2) {
+        return 'the course topic';
+      }
+      
+      return cleaned;
+    };
+
     // Build course modules context if available
     const courseModulesContext = coursePlan?.modules && Array.isArray(coursePlan.modules) && coursePlan.modules.length > 0
       ? `\nCOURSE STRUCTURE:\n${coursePlan.modules.map((module: any, index: number) => 
@@ -80,16 +129,16 @@ FORMATTING REQUIREMENTS:
 - Make your messages visually engaging and easy to scan
 
 SPECIFIC CONTENT REQUIREMENTS:
-- Every response MUST directly relate to: ${coursePlan?.courseDescription || 'the course topic'}
-- Provide examples and scenarios specific to: ${coursePlan?.courseDescription || 'the course topic'}
+- Every response MUST directly relate to: ${cleanCourseDescription(coursePlan?.courseDescription)}
+- Provide examples and scenarios specific to: ${cleanCourseDescription(coursePlan?.courseDescription)}
 - Address the needs of: ${coursePlan?.learnerDescription || 'the target learners'}
 - Reference specific modules and concepts from the course structure
-- Use terminology and examples relevant to: ${coursePlan?.courseDescription || 'the course topic'}
+- Use terminology and examples relevant to: ${cleanCourseDescription(coursePlan?.courseDescription)}
 
 COURSE CONTEXT:
 - Track: ${trackType}
 - Company: ${companyName || 'General'}
-- Course Description: ${coursePlan?.courseDescription || 'Not specified'}
+- Course Description: ${cleanCourseDescription(coursePlan?.courseDescription)}
 - Target Learners: ${coursePlan?.learnerDescription || 'Not specified'}
 - Goal: ${coursePlan?.goal || 'Learning objectives'}
 - Duration: ${coursePlan?.duration || coursePlan?.modules?.reduce((total: number, module: any) => total + (module.duration || 0), 0) || 30} minutes
@@ -98,7 +147,7 @@ ${courseModulesContext}
 
 ${companyData ? `COMPANY CONTEXT: ${JSON.stringify(companyData).substring(0, 500)}` : ''}
 
-Remember: MAXIMUM 40-100 words per response. Be engaging, concise, and use **bold** for impact. EVERY response must be specific to ${coursePlan?.courseDescription || 'the course topic'} and relevant to ${coursePlan?.learnerDescription || 'the target learners'}.`;
+Remember: MAXIMUM 40-100 words per response. Be engaging, concise, and use **bold** for impact. EVERY response must be specific to ${cleanCourseDescription(coursePlan?.courseDescription)} and relevant to ${coursePlan?.learnerDescription || 'the target learners'}.`;
 
     // Prepare messages for Groq
     const messages = [

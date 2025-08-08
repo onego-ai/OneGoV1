@@ -80,7 +80,7 @@ const CourseReader: React.FC<CourseReaderProps> = ({
   const [progress, setProgress] = useState(0);
   const [loading, setLoading] = useState(false);
   const [sessionStartTime, setSessionStartTime] = useState<Date>(new Date());
-  const [timerActive, setTimerActive] = useState(false);
+  // Removed timer; no time limit in reading mode
   const [totalInteractions, setTotalInteractions] = useState(0);
   const [enhancedCompanyContext, setEnhancedCompanyContext] = useState<EnhancedCompanyContext | null>(null);
   const { getEnhancedCompanyContext } = useWebsiteContext();
@@ -105,7 +105,7 @@ const CourseReader: React.FC<CourseReaderProps> = ({
           title: module.title,
           content: module.content,
           keyPoints: module.keyPoints || [],
-          duration: module.duration || 3,
+          duration: 0,
           isCompleted: false
         }));
         setSections(courseSections);
@@ -126,8 +126,7 @@ const CourseReader: React.FC<CourseReaderProps> = ({
         setQuizzes(generatedQuizzes);
       }
       
-      // Start timer
-      setTimerActive(true);
+      // No timer; just record session start time locally
       setSessionStartTime(new Date());
       
       toast({
@@ -209,7 +208,7 @@ Format as JSON with sections array containing: id, title, content, keyPoints, du
             title: section.title || `Section ${index + 1}`,
             content: section.content || '',
             keyPoints: section.keyPoints || [],
-            duration: section.duration || 3,
+            duration: 0,
             isCompleted: false
           }));
         }
@@ -224,8 +223,7 @@ Format as JSON with sections array containing: id, title, content, keyPoints, du
 
   const generateFallbackSections = (coursePlan: any, trackType: string): CourseSection[] => {
     const numberOfTopics = coursePlan.numberOfTopics || 3;
-    const duration = parseInt(coursePlan.duration || '30');
-    const topicDuration = Math.floor(duration / numberOfTopics);
+    const topicDuration = 0;
     
     return Array.from({ length: numberOfTopics }, (_, index) => ({
       id: `section-${index + 1}`,
@@ -386,7 +384,7 @@ Format as JSON with sections array containing: id, title, content, keyPoints, du
 
       // Calculate points based on section completion (5 points per section)
       const sectionPoints = 5;
-      const totalPoints = (currentPerformance?.points || 0) + sectionPoints;
+      const totalPoints = (((currentPerformance as any)?.points as number) || 0) + sectionPoints;
 
       // Update performance record
       const { error: updateError } = await supabase
@@ -428,23 +426,20 @@ Format as JSON with sections array containing: id, title, content, keyPoints, du
       if (response.error) throw new Error(response.error);
 
       const audio = new Audio(`data:audio/mp3;base64,${response.data.audio}`);
-      audio.play();
-      
-      // Mark as completed after listening
-      setTimeout(() => {
+      audio.addEventListener('ended', () => {
         markSectionComplete(section.id);
         setIsSpeaking(false);
-      }, (section.duration * 60 * 1000) + 2000); // Duration + 2 seconds buffer
-      
+      });
+      await audio.play();
+       
     } catch (error) {
       console.error('Error playing audio:', error);
       setIsSpeaking(false);
     }
   };
 
-  const handleTimeUp = () => {
-    endSession();
-  };
+  // No time limit
+  const handleTimeUp = () => {};
 
   const endSession = async () => {
     try {
@@ -488,9 +483,8 @@ Format as JSON with sections array containing: id, title, content, keyPoints, du
     setQuizzes(prev => prev.map(quiz => ({ ...quiz, isCompleted: false, score: undefined })));
     setProgress(0);
     setCurrentSection(0);
-    setTimerActive(false);
+    // Removed timer; no time pressure
     setSessionStartTime(new Date());
-    setTimerActive(true);
   };
 
   const handleQuizComplete = (quizId: string, score: number) => {
@@ -548,7 +542,7 @@ Format as JSON with sections array containing: id, title, content, keyPoints, du
 
       // Calculate points based on quiz performance
       const quizPoints = Math.round((score / 100) * 10); // 10 points max per quiz
-      const totalPoints = (currentPerformance?.points || 0) + quizPoints;
+      const totalPoints = (((currentPerformance as any)?.points as number) || 0) + quizPoints;
 
       // Calculate new progress
       const completedSections = sections.filter(s => s.isCompleted).length;
@@ -579,6 +573,16 @@ Format as JSON with sections array containing: id, title, content, keyPoints, du
       }
     } catch (error) {
       console.error('Error saving quiz performance:', error);
+    }
+  };
+
+  // Starts the first incomplete quiz, or the first quiz if all are completed
+  const startFirstAvailableQuiz = () => {
+    const nextQuiz = quizzes.find(q => !q.isCompleted) || quizzes[0];
+    if (nextQuiz) {
+      setCurrentQuiz(nextQuiz);
+      setShowQuiz(true);
+      setQuizAnswers({});
     }
   };
 
@@ -702,9 +706,7 @@ Format as JSON with sections array containing: id, title, content, keyPoints, du
                                   • {point}
                                 </div>
                               ))}
-                              <div className="text-xs text-gray-400 mt-2">
-                                ⏱️ {section.duration} min read
-                              </div>
+                              {/* Duration hidden; no time pressure */}
                             </div>
                           </div>
                         </div>
@@ -968,11 +970,7 @@ Format as JSON with sections array containing: id, title, content, keyPoints, du
             </div>
             
             <div className="flex items-center space-x-2 sm:space-x-4">
-              <SessionTimer 
-                durationString={course.course_plan?.duration || '30 minutes'} 
-                onTimeUp={handleTimeUp}
-                isActive={timerActive}
-              />
+              {/* No session timer; free-flow reading */}
               
               <button
                 onClick={onSwitchToChat}
@@ -1033,87 +1031,115 @@ Format as JSON with sections array containing: id, title, content, keyPoints, du
               />
             ) : (
               <div className="space-y-6 sm:space-y-8">
-                {sections.map((section, index) => (
-                  <div 
-                    key={section.id}
-                    id={section.id}
-                    className={`bg-white rounded-lg shadow-md border transition-all duration-300 ${
-                      section.isCompleted ? 'border-green-200 bg-green-50' : 'border-gray-200'
-                    }`}
-                    style={{
-                      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
-                      maxWidth: '800px',
-                      margin: '0 auto'
-                    }}
-                  >
-                    <div className="p-4 sm:p-6 lg:p-8">
-                      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between mb-4 sm:mb-6">
-                        <div className="flex items-center space-x-2 sm:space-x-3 mb-3 sm:mb-0">
-                          <div className={`flex items-center justify-center w-6 h-6 sm:w-8 sm:h-8 rounded-full text-xs sm:text-sm font-medium ${
-                            section.isCompleted 
-                              ? 'bg-green-500 text-white' 
-                              : 'bg-gray-200 text-gray-600'
-                          }`}>
-                            {section.isCompleted ? (
-                              <CheckCircle className="h-3 w-3 sm:h-5 sm:w-5" />
-                            ) : (
-                              index + 1
+                {sections[currentSection] && (() => {
+                  const section = sections[currentSection];
+                  return (
+                    <div 
+                      key={section.id}
+                      id={section.id}
+                      className={`bg-white rounded-lg shadow-md border transition-all duration-300 ${
+                        section.isCompleted ? 'border-green-200 bg-green-50' : 'border-gray-200'
+                      }`}
+                      style={{
+                        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+                        maxWidth: '800px',
+                        margin: '0 auto'
+                      }}
+                    >
+                      <div className="p-4 sm:p-6 lg:p-8">
+                        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between mb-4 sm:mb-6">
+                          <div className="flex items-center space-x-2 sm:space-x-3 mb-3 sm:mb-0">
+                            <div className={`flex items-center justify-center w-6 h-6 sm:w-8 sm:h-8 rounded-full text-xs sm:text-sm font-medium ${
+                              section.isCompleted 
+                                ? 'bg-green-500 text-white' 
+                                : 'bg-gray-200 text-gray-600'
+                            }`}>
+                              {section.isCompleted ? (
+                                <CheckCircle className="h-3 w-3 sm:h-5 sm:w-5" />
+                              ) : (
+                                currentSection + 1
+                              )}
+                            </div>
+                            <h2 className="text-lg sm:text-xl font-semibold text-gray-900">
+                              {section.title}
+                            </h2>
+                          </div>
+                          
+                          <div className="flex items-center space-x-2">
+                            {/* Duration hidden; no time pressure */}
+                            {audioEnabled && (
+                              <button
+                                onClick={() => speakSection(section)}
+                                disabled={isSpeaking}
+                                className="p-1 sm:p-2 text-green-600 hover:text-green-700 disabled:opacity-50 rounded-full hover:bg-green-50 touch-target"
+                                title={isSpeaking ? "Pause audio" : "Listen to section"}
+                              >
+                                {isSpeaking ? <Pause className="h-3 w-3 sm:h-4 sm:w-4" /> : <Play className="h-3 w-3 sm:h-4 sm:w-4" />}
+                              </button>
                             )}
                           </div>
-                          <h2 className="text-lg sm:text-xl font-semibold text-gray-900">
-                            {section.title}
-                          </h2>
                         </div>
-                        
-                        <div className="flex items-center space-x-2">
-                          <span className="text-xs sm:text-sm text-gray-500">
-                            {section.duration} min read
-                          </span>
-                          {audioEnabled && (
+
+                        <div className="mb-4 sm:mb-6">
+                          <CourseContentRenderer content={section.content} />
+                        </div>
+
+                        {/* Key Points */}
+                        <div className="bg-blue-50 rounded-lg p-3 sm:p-4">
+                          <h3 className="text-xs sm:text-sm font-semibold text-blue-800 mb-2 sm:mb-3">
+                            Key Points:
+                          </h3>
+                          <ul className="space-y-1 sm:space-y-2">
+                            {section.keyPoints.map((point, pointIndex) => (
+                              <li key={pointIndex} className="flex items-start space-x-2">
+                                <span className="text-blue-500 mt-1">•</span>
+                                <span className="text-xs sm:text-sm text-blue-700">{point}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+
+                        {/* Navigation */}
+                        <div className="mt-4 sm:mt-6 flex flex-col sm:flex-row sm:justify-between gap-3">
+                          <button
+                            onClick={() => setCurrentSection(Math.max(0, currentSection - 1))}
+                            disabled={currentSection === 0}
+                            className="px-4 py-2 text-gray-600 hover:text-gray-800 disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base touch-target"
+                          >
+                            Previous Module
+                          </button>
+
+                          {!section.isCompleted && (
                             <button
-                              onClick={() => speakSection(section)}
-                              disabled={isSpeaking}
-                              className="p-1 sm:p-2 text-green-600 hover:text-green-700 disabled:opacity-50 rounded-full hover:bg-green-50 touch-target"
-                              title={isSpeaking ? "Pause audio" : "Listen to section"}
+                              onClick={() => markSectionComplete(section.id)}
+                              className="flex-1 sm:flex-none bg-green-500 text-white py-2 sm:py-3 px-4 rounded-md hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500 font-medium text-sm sm:text-base touch-target"
                             >
-                              {isSpeaking ? <Pause className="h-3 w-3 sm:h-4 sm:w-4" /> : <Play className="h-3 w-3 sm:h-4 sm:w-4" />}
+                              Mark as Complete
                             </button>
                           )}
-                        </div>
-                      </div>
 
-                      <div className="mb-4 sm:mb-6">
-                        <CourseContentRenderer content={section.content} />
-                      </div>
+                          {currentSection === sections.length - 1 && quizzes.length > 0 && (
+                            <button
+                              onClick={startFirstAvailableQuiz}
+                              className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 text-sm sm:text-base touch-target"
+                            >
+                              Move to Quiz
+                            </button>
+                          )}
 
-                      {/* Key Points */}
-                      <div className="bg-blue-50 rounded-lg p-3 sm:p-4">
-                        <h3 className="text-xs sm:text-sm font-semibold text-blue-800 mb-2 sm:mb-3">
-                          Key Points:
-                        </h3>
-                        <ul className="space-y-1 sm:space-y-2">
-                          {section.keyPoints.map((point, pointIndex) => (
-                            <li key={pointIndex} className="flex items-start space-x-2">
-                              <span className="text-blue-500 mt-1">•</span>
-                              <span className="text-xs sm:text-sm text-blue-700">{point}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-
-                      {!section.isCompleted && (
-                        <div className="mt-4 sm:mt-6">
                           <button
-                            onClick={() => markSectionComplete(section.id)}
-                            className="w-full bg-green-500 text-white py-2 sm:py-3 px-4 rounded-md hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500 font-medium text-sm sm:text-base touch-target"
+                            onClick={() => setCurrentSection(Math.min(sections.length - 1, currentSection + 1))}
+                            disabled={currentSection === sections.length - 1}
+                            className="px-4 py-2 text-white rounded-md text-sm sm:text-base touch-target disabled:opacity-50 disabled:cursor-not-allowed bg-blue-500 hover:bg-blue-600"
                           >
-                            Mark as Complete
+                            Next Module
                           </button>
                         </div>
-                      )}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })()}
+
 
                 {/* Completion Message */}
                 {progress >= 100 && (

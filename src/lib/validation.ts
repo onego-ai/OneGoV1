@@ -149,11 +149,21 @@ export const escapeHtml = (unsafe: string): string => {
 
 // SQL Injection protection (additional layer)
 export const containsSqlInjection = (input: string): boolean => {
+  // Allow normal punctuation like quotes and words like "and/or".
+  // Focus on high-signal SQL injection markers and constructs.
   const sqlPatterns = [
-    /(\b(SELECT|INSERT|UPDATE|DELETE|DROP|CREATE|ALTER|EXEC|UNION|SCRIPT)\b)/i,
-    /(--|\/\*|\*\/|;|'|")/,
-    /(\bOR\b|\bAND\b).*?=.*?=|\bOR\b.*?1\s*=\s*1/i,
+    /--/i, // inline SQL comment
+    /\/\*/i, // start of block comment
+    /\*\//i, // end of block comment
+    /;/, // statement separator
+    /\bUNION\b\s+\bSELECT\b/i,
+    /\bDROP\b\s+\b(TABLE|DATABASE)\b/i,
+    /\bALTER\b\s+\b(TABLE|DATABASE)\b/i,
+    /\bINSERT\b\s+\bINTO\b/i,
+    /\bUPDATE\b\s+\b\w+\b\s+\bSET\b/i,
+    /\bDELETE\b\s+\bFROM\b/i,
+    /\bEXEC(\s+|\s*\()?/i,
   ];
-  
-  return sqlPatterns.some(pattern => pattern.test(input));
+
+  return sqlPatterns.some((pattern) => pattern.test(input));
 };

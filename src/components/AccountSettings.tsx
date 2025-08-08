@@ -209,7 +209,7 @@ Current Details:
 Please contact me to discuss our options.
 
 Thank you!`}
-                  className="w-full inline-flex items-center justify-center gap-2 py-2 px-4 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+                  className="w-full inline-flex items-center justify-center gap-2 py-2 px-4 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
                 >
                   <Mail size={16} />
                   Contact Us to Add More Users

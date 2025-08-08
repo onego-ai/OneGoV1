@@ -16,6 +16,22 @@ import {
   ArrowLeft
 } from 'lucide-react';
 import CourseContentRenderer from './content/CourseContentRenderer';
+import ReactQuill from 'react-quill';
+import 'react-quill/dist/quill.snow.css';
+
+// Helper to detect HTML content
+const looksLikeHtml = (s: string) => /<\/?\w+[^>]*>/.test(s || '');
+
+// Helper to convert plain text into simple HTML paragraphs and line breaks
+const plainTextToHtml = (text: string) => {
+  if (!text) return '';
+  const normalized = text.replace(/\r\n/g, '\n');
+  const paragraphs = normalized.split(/\n\n+/).map(p => {
+    const withBreaks = p.split('\n').join('<br/>');
+    return `<p>${withBreaks}</p>`;
+  });
+  return paragraphs.join('');
+};
 
 interface CourseEditorProps {
   course: any;
@@ -72,7 +88,7 @@ const ModuleEditor = React.memo<ModuleEditorProps>(({
                 <ChevronRight className="h-5 w-5" />
               )}
             </button>
-            <FileText className="h-5 w-5 text-blue-500" />
+            <FileText className="h-5 w-5 text-green-500" />
             {isEditing ? (
               <input
                 type="text"
@@ -107,37 +123,33 @@ const ModuleEditor = React.memo<ModuleEditorProps>(({
 
         {isExpanded && (
           <div className="ml-8 space-y-4">
-            {/* Duration Editor */}
-            <div className="flex items-center space-x-3">
-              <label className="text-sm font-medium text-gray-700">Duration:</label>
-              <select
-                value={module.duration}
-                onChange={(e) => onUpdateModule(module.id, { duration: parseInt(e.target.value) })}
-                className="border border-gray-300 rounded px-2 py-1 text-sm"
-              >
-                {[3, 5, 10, 15, 20, 30].map(d => (
-                  <option key={d} value={d}>{d} minutes</option>
-                ))}
-              </select>
-            </div>
+            {/* Duration editor removed */}
 
             {/* Content Editor */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Content
               </label>
-              {isEditing ? (
-                <textarea
-                  value={module.content}
-                  onChange={(e) => onUpdateModule(module.id, { content: e.target.value })}
-                  className="w-full h-32 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-                  placeholder="Enter module content..."
-                />
-              ) : (
-                <div className="prose max-w-none">
-                  <CourseContentRenderer content={module.content} />
+                              <div className="bg-white border border-gray-300 rounded-lg">
+                  <ReactQuill
+                    theme="snow"
+                    value={looksLikeHtml(module.content) ? module.content : plainTextToHtml(module.content)}
+                    onChange={(html) => onUpdateModule(module.id, { content: html })}
+                    className="min-h-[480px]"
+                    modules={{
+                      toolbar: [
+                        [{ header: [1, 2, 3, false] }],
+                        ['bold', 'italic', 'underline', 'strike'],
+                        [{ list: 'ordered' }, { list: 'bullet' }],
+                        [{ indent: '-1' }, { indent: '+1' }],
+                        [{ align: [] }],
+                        ['link', 'blockquote', 'code-block'],
+                        ['clean']
+                      ]
+                    }}
+                    formats={['header','bold','italic','underline','strike','list','bullet','indent','align','link','blockquote','code-block']}
+                  />
                 </div>
-              )}
             </div>
 
             {/* Key Points Editor */}
@@ -155,25 +167,19 @@ const ModuleEditor = React.memo<ModuleEditorProps>(({
               <div className="space-y-2">
                 {module.keyPoints.map((point, index) => (
                   <div key={index} className="flex items-center space-x-2">
-                    <span className="text-blue-500">•</span>
-                    {isEditing ? (
-                      <>
-                        <input
-                          type="text"
-                          value={point}
-                          onChange={(e) => onUpdateKeyPoint(module.id, index, e.target.value)}
-                          className="flex-1 border border-gray-300 rounded px-2 py-1 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        />
-                        <button
-                          onClick={() => onDeleteKeyPoint(module.id, index)}
-                          className="p-1 text-red-500 hover:text-red-700"
-                        >
-                          <X className="h-4 w-4" />
-                        </button>
-                      </>
-                    ) : (
-                      <span className="text-sm text-gray-700">{point}</span>
-                    )}
+                    <input
+                      type="text"
+                      value={point}
+                      onChange={(e) => onUpdateKeyPoint(module.id, index, e.target.value)}
+                      className="flex-1 border border-gray-300 rounded px-2 py-1 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                    <button
+                      onClick={() => onDeleteKeyPoint(module.id, index)}
+                      className="p-1 text-red-500 hover:text-red-700"
+                      title="Remove key point"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
                   </div>
                 ))}
               </div>
@@ -190,7 +196,6 @@ ModuleEditor.displayName = 'ModuleEditor';
 const CourseEditor: React.FC<CourseEditorProps> = ({ course, user, onBack, onSave }) => {
   const [modules, setModules] = useState<Module[]>([]);
   const [courseTitle, setCourseTitle] = useState('');
-  const [isEditing, setIsEditing] = useState(false);
   const [editingModuleId, setEditingModuleId] = useState<number | null>(null);
   const [expandedModules, setExpandedModules] = useState<Set<number>>(new Set());
   const [loading, setLoading] = useState(false);
@@ -349,16 +354,6 @@ const CourseEditor: React.FC<CourseEditorProps> = ({ course, user, onBack, onSav
         </div>
         <div className="flex items-center space-x-3">
           <button
-            onClick={() => setIsEditing(!isEditing)}
-            className={`px-4 py-2 rounded-lg font-medium ${
-              isEditing 
-                ? 'bg-gray-100 text-gray-700 hover:bg-gray-200' 
-                : 'bg-blue-500 text-white hover:bg-blue-600'
-            }`}
-          >
-            {isEditing ? 'Preview Mode' : 'Edit Mode'}
-          </button>
-          <button
             onClick={saveCourse}
             disabled={loading}
             className="flex items-center px-4 py-2 bg-green-500 text-white rounded-lg font-medium hover:bg-green-600 disabled:opacity-50"
@@ -429,7 +424,7 @@ const CourseEditor: React.FC<CourseEditorProps> = ({ course, user, onBack, onSav
           <h2 className="text-xl font-semibold text-gray-900">Course Modules</h2>
           <button
             onClick={addNewModule}
-            className="flex items-center px-4 py-2 bg-blue-500 text-white rounded-lg font-medium hover:bg-blue-600"
+            className="flex items-center px-4 py-2 bg-green-500 text-white rounded-lg font-medium hover:bg-green-600"
           >
             <Plus className="h-4 w-4 mr-2" />
             Add Module
