@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useWebsiteContext } from '@/hooks/useWebsiteContext';
-import { sanitizeForTTS } from '@/utils/textUtils';
 import { 
   BookOpen, 
   MessageCircle, 
@@ -10,13 +9,10 @@ import {
   VolumeX, 
   CheckCircle, 
   ArrowLeft,
-  Play,
-  Pause,
   RotateCcw,
   ChevronRight,
   ChevronDown
 } from 'lucide-react';
-import SessionTimer from './SessionTimer';
 import CourseContentRenderer from './content/CourseContentRenderer';
 
 interface CourseReaderProps {
@@ -76,7 +72,6 @@ const CourseReader: React.FC<CourseReaderProps> = ({
   const [showQuiz, setShowQuiz] = useState(false);
   const [isReading, setIsReading] = useState(false);
   const [audioEnabled, setAudioEnabled] = useState(true);
-  const [isSpeaking, setIsSpeaking] = useState(false);
   const [progress, setProgress] = useState(0);
   const [loading, setLoading] = useState(false);
   const [sessionStartTime, setSessionStartTime] = useState<Date>(new Date());
@@ -421,31 +416,7 @@ Format as JSON with sections array containing: id, title, content, keyPoints, du
     }
   };
 
-  const speakSection = async (section: CourseSection) => {
-    if (!audioEnabled) return;
-    
-    setIsSpeaking(true);
-    try {
-      const speechText = sanitizeForTTS(section.content);
-      
-      const response = await supabase.functions.invoke('text-to-speech', {
-        body: { text: speechText }
-      });
-
-      if (response.error) throw new Error(response.error);
-
-      const audio = new Audio(`data:audio/mp3;base64,${response.data.audio}`);
-      audio.addEventListener('ended', () => {
-        markSectionComplete(section.id);
-        setIsSpeaking(false);
-      });
-      await audio.play();
-       
-    } catch (error) {
-      console.error('Error playing audio:', error);
-      setIsSpeaking(false);
-    }
-  };
+  // Removed TTS play/pause controls in reader
 
   // No time limit
   const handleTimeUp = () => {};
@@ -1225,19 +1196,7 @@ Format as JSON with sections array containing: id, title, content, keyPoints, du
                             </h2>
                           </div>
                           
-                          <div className="flex items-center space-x-2">
-                            {/* Duration hidden; no time pressure */}
-                            {audioEnabled && (
-                              <button
-                                onClick={() => speakSection(section)}
-                                disabled={isSpeaking}
-                                className="p-1 sm:p-2 text-green-600 hover:text-green-700 disabled:opacity-50 rounded-full hover:bg-green-50 touch-target"
-                                title={isSpeaking ? "Pause audio" : "Listen to section"}
-                              >
-                                {isSpeaking ? <Pause className="h-3 w-3 sm:h-4 sm:w-4" /> : <Play className="h-3 w-3 sm:h-4 sm:w-4" />}
-                              </button>
-                            )}
-                          </div>
+                          <div className="flex items-center space-x-2"></div>
                         </div>
 
                         <div className="mb-4 sm:mb-6">
