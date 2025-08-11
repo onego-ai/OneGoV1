@@ -5,8 +5,6 @@ import { useWebsiteContext } from '@/hooks/useWebsiteContext';
 import { 
   BookOpen, 
   MessageCircle, 
-  Volume2, 
-  VolumeX, 
   CheckCircle, 
   ArrowLeft,
   RotateCcw,
@@ -71,7 +69,7 @@ const CourseReader: React.FC<CourseReaderProps> = ({
   const [quizAnswers, setQuizAnswers] = useState<{[key: string]: number}>({});
   const [showQuiz, setShowQuiz] = useState(false);
   const [isReading, setIsReading] = useState(false);
-  const [audioEnabled, setAudioEnabled] = useState(true);
+  
   const [progress, setProgress] = useState(0);
   const [loading, setLoading] = useState(false);
   const [sessionStartTime, setSessionStartTime] = useState<Date>(new Date());
@@ -1112,12 +1110,7 @@ Format as JSON with sections array containing: id, title, content, keyPoints, du
                 <span className="sm:hidden">Chat</span>
               </button>
               
-              <button
-                onClick={() => setAudioEnabled(!audioEnabled)}
-                className="p-1 sm:p-2 text-gray-600 hover:text-gray-800 touch-target"
-              >
-                {audioEnabled ? <Volume2 className="h-4 w-4 sm:h-5 sm:w-5" /> : <VolumeX className="h-4 w-4 sm:h-5 sm:w-5" />}
-              </button>
+              
             </div>
           </div>
         </div>
