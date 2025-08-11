@@ -589,27 +589,7 @@ Format as JSON with sections array containing: id, title, content, keyPoints, du
 
   // Sidebar component for course navigation
   const CourseSidebar = () => {
-    const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-
-    const toggleSection = (sectionId: string) => {
-      const newExpanded = new Set(expandedSections);
-      if (newExpanded.has(sectionId)) {
-        newExpanded.delete(sectionId);
-      } else {
-        newExpanded.add(sectionId);
-      }
-      setExpandedSections(newExpanded);
-    };
-
-    const scrollToSection = (sectionId: string) => {
-      const element = document.getElementById(sectionId);
-      if (element) {
-        element.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }
-      // Close sidebar on mobile after navigation
-      setIsSidebarOpen(false);
-    };
 
     const startQuiz = (quiz: Quiz) => {
       setCurrentQuiz(quiz);
@@ -660,59 +640,35 @@ Format as JSON with sections array containing: id, title, content, keyPoints, du
                 <h3 className="text-xs sm:text-sm font-medium text-gray-700 mb-3">📚 Course Sections</h3>
                 <div className="space-y-2">
                   {sections.map((section, index) => (
-                    <div key={section.id} className="border border-gray-200 rounded-lg">
-                      <button
-                        onClick={() => toggleSection(section.id)}
-                        className={`w-full p-2 sm:p-3 text-left flex items-center justify-between hover:bg-gray-50 transition-colors touch-target ${
-                          section.isCompleted ? 'bg-green-50 border-green-200' : ''
-                        }`}
-                      >
-                        <div className="flex items-center space-x-2 sm:space-x-3">
-                          <div className={`flex items-center justify-center w-5 h-5 sm:w-6 sm:h-6 rounded-full text-xs font-medium ${
-                            section.isCompleted 
-                              ? 'bg-green-500 text-white' 
-                              : 'bg-gray-200 text-gray-600'
-                          }`}>
-                            {section.isCompleted ? (
-                              <CheckCircle className="h-3 w-3" />
-                            ) : (
-                              index + 1
-                            )}
-                          </div>
-                          <span className={`text-xs sm:text-sm font-medium ${
-                            section.isCompleted ? 'text-green-700' : 'text-gray-700'
-                          }`}>
-                            {section.title}
-                          </span>
+                    <button
+                      key={section.id}
+                      onClick={() => {
+                        setCurrentSection(index);
+                        setIsSidebarOpen(false);
+                      }}
+                      className={`w-full p-2 sm:p-3 text-left flex items-center justify-between border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors touch-target ${
+                        section.isCompleted ? 'bg-green-50 border-green-200' : ''
+                      }`}
+                    >
+                      <div className="flex items-center space-x-2 sm:space-x-3">
+                        <div className={`flex items-center justify-center w-5 h-5 sm:w-6 sm:h-6 rounded-full text-xs font-medium ${
+                          section.isCompleted 
+                            ? 'bg-green-500 text-white' 
+                            : 'bg-gray-200 text-gray-600'
+                        }`}>
+                          {section.isCompleted ? (
+                            <CheckCircle className="h-3 w-3" />
+                          ) : (
+                            index + 1
+                          )}
                         </div>
-                        {expandedSections.has(section.id) ? (
-                          <ChevronDown className="h-4 w-4 text-gray-400" />
-                        ) : (
-                          <ChevronRight className="h-4 w-4 text-gray-400" />
-                        )}
-                      </button>
-                      
-                      {expandedSections.has(section.id) && (
-                        <div className="border-t border-gray-200 bg-gray-50">
-                          <div className="p-2 sm:p-3">
-                            <div className="space-y-2">
-                              <button
-                                onClick={() => scrollToSection(section.id)}
-                                className="w-full text-left p-2 text-xs sm:text-sm text-gray-600 hover:bg-white hover:text-gray-800 rounded transition-colors touch-target"
-                              >
-                                📖 Overview
-                              </button>
-                              {section.keyPoints.map((point, pointIndex) => (
-                                <div key={pointIndex} className="p-2 text-xs text-gray-500">
-                                  • {point}
-                                </div>
-                              ))}
-                              {/* Duration hidden; no time pressure */}
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
+                        <span className={`text-xs sm:text-sm font-medium ${
+                          section.isCompleted ? 'text-green-700' : 'text-gray-700'
+                        }`}>
+                          {section.title}
+                        </span>
+                      </div>
+                    </button>
                   ))}
                 </div>
               </div>
