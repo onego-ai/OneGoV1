@@ -18,12 +18,49 @@ serve(async (req) => {
   }
 
   try {
-    const { text, voice } = await req.json()
-
-    if (!text) {
-      throw new Error('Text is required')
+    console.log('TTS function called with method:', req.method);
+    
+    let requestBody;
+    try {
+      requestBody = await req.json();
+      console.log('Request body received:', requestBody);
+    } catch (parseError) {
+      console.error('Failed to parse request JSON:', parseError);
+      return new Response(
+        JSON.stringify({ error: 'Invalid JSON in request body' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
+    const { text, voice } = requestBody;
+    console.log('Extracted text:', text?.substring(0, 100) + '...');
+    console.log('Extracted voice:', voice);
+
+    if (!text) {
+      console.error('Text is missing from request');
+      return new Response(
+        JSON.stringify({ error: 'Text is required' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (typeof text !== 'string') {
+      console.error('Text is not a string:', typeof text);
+      return new Response(
+        JSON.stringify({ error: 'Text must be a string' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (text.length === 0) {
+      console.error('Text is empty');
+      return new Response(
+        JSON.stringify({ error: 'Text cannot be empty' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    console.log('Making OpenAI TTS API request...');
     const response = await fetch('https://api.openai.com/v1/audio/speech', {
       method: 'POST',
       headers: {
@@ -36,18 +73,26 @@ serve(async (req) => {
         voice: voice || 'nova',
         response_format: 'mp3',
       }),
-    })
+    });
 
+    console.log('OpenAI response status:', response.status);
+    
     if (!response.ok) {
-      const error = await response.json()
-      throw new Error(error.error?.message || 'Failed to generate speech')
+      const errorText = await response.text();
+      console.error('OpenAI API error:', errorText);
+      return new Response(
+        JSON.stringify({ error: `OpenAI API error: ${response.status} - ${errorText}` }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
-    const arrayBuffer = await response.arrayBuffer()
+    const arrayBuffer = await response.arrayBuffer();
     const base64Audio = btoa(
       String.fromCharCode(...new Uint8Array(arrayBuffer))
-    )
+    );
 
+    console.log('Audio generated successfully, length:', base64Audio.length);
+    
     return new Response(
       JSON.stringify({ audioContent: base64Audio }),
       {
@@ -55,6 +100,7 @@ serve(async (req) => {
       },
     )
   } catch (error) {
+    console.error('Error in TTS function:', error);
     return new Response(
       JSON.stringify({ error: error.message }),
       {

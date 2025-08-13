@@ -688,13 +688,35 @@ const TutoringSession: React.FC<TutoringSessionProps> = ({ course, user, onEnd, 
       setIsSpeaking(true);
       setIsGeneratingVoice(true);
       
+      const textToSend = speechText || text;
+      
+      // Sanitize text for TTS - remove HTML tags and special characters
+      const sanitizedText = textToSend
+        .replace(/<[^>]*>/g, '') // Remove HTML tags
+        .replace(/&[a-zA-Z]+;/g, ' ') // Replace HTML entities with spaces
+        .replace(/\*\*/g, '') // Remove markdown bold
+        .replace(/\*/g, '') // Remove markdown italic
+        .replace(/#{1,6}\s/g, '') // Remove markdown headers
+        .replace(/\n+/g, ' ') // Replace multiple newlines with single space
+        .replace(/\s+/g, ' ') // Replace multiple spaces with single space
+        .trim();
+      
+      console.log('TTS - Original text:', textToSend?.substring(0, 100) + '...');
+      console.log('TTS - Sanitized text:', sanitizedText?.substring(0, 100) + '...');
+      console.log('TTS - Text length:', sanitizedText?.length);
+      console.log('TTS - Voice:', isNia ? 'nova' : 'alloy');
+      
       // Generate speech for the message
       const response = await supabase.functions.invoke('text-to-speech', {
         body: { 
-          text: speechText || text,
+          text: sanitizedText,
           voice: isNia ? 'nova' : 'alloy'
         }
       });
+
+      console.log('TTS - Response received:', response);
+      console.log('TTS - Response data:', response.data);
+      console.log('TTS - Response error:', response.error);
 
       if (response.error) throw new Error(response.error);
 
@@ -744,6 +766,7 @@ const TutoringSession: React.FC<TutoringSessionProps> = ({ course, user, onEnd, 
         audio.volume = 0.8;
         
       } else {
+        console.log('TTS - No audio data received');
         startTextStreaming(text);
       }
     } catch (error) {
