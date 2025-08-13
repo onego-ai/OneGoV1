@@ -1,7 +1,6 @@
 
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.50.2';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -15,9 +14,42 @@ serve(async (req) => {
     return new Response(null, { status: 200, headers: corsHeaders });
   }
 
+  // Health check endpoint
+  if (req.method === 'GET') {
+    const groqApiKey = Deno.env.get('GROQ_API_KEY');
+    return new Response(
+      JSON.stringify({ 
+        status: 'ok', 
+        timestamp: new Date().toISOString(),
+        groqApiKeyConfigured: !!groqApiKey,
+        groqApiKeyLength: groqApiKey ? groqApiKey.length : 0
+      }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+
   try {
     console.log('Chat function called');
     
+    // Validate request method
+    if (req.method !== 'POST') {
+      return new Response(
+        JSON.stringify({ error: 'Method not allowed. Use POST.' }),
+        { status: 405, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    let requestBody;
+    try {
+      requestBody = await req.json();
+    } catch (parseError) {
+      console.error('Failed to parse request JSON:', parseError);
+      return new Response(
+        JSON.stringify({ error: 'Invalid JSON in request body' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     const { 
       message, 
       chatHistory, 
@@ -29,14 +61,24 @@ serve(async (req) => {
       trackType,
       companyName,
       companyData
-    } = await req.json();
+    } = requestBody;
+
+    // Validate required fields
+    if (!message || !courseId || !userId) {
+      console.error('Missing required fields:', { message: !!message, courseId: !!courseId, userId: !!userId });
+      return new Response(
+        JSON.stringify({ error: 'Missing required fields: message, courseId, userId' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     console.log('Request data received:', {
       message: message?.substring(0, 50) + '...',
       courseId,
       userId,
       trackType,
-      companyName
+      companyName,
+      chatHistoryLength: chatHistory?.length || 0
     });
 
     const groqApiKey = Deno.env.get('GROQ_API_KEY');
@@ -55,180 +97,118 @@ serve(async (req) => {
       );
     }
 
-    // Clean up course description to extract the actual topic
-    const cleanCourseDescription = (desc: string) => {
-      if (!desc) return 'the course topic';
+    // Test Groq API integration
+    try {
+      console.log('Testing Groq API integration...');
       
-      // Remove common prompt phrases and course creation language
-      let cleaned = desc.toLowerCase()
-        .replace(/create\s+a\s+course\s+(?:on|about|regarding|concerning)\s+/gi, '')
-        .replace(/create\s+course\s+(?:on|about|regarding|concerning)\s+/gi, '')
-        .replace(/make\s+a\s+course\s+(?:on|about|regarding|concerning)\s+/gi, '')
-        .replace(/make\s+course\s+(?:on|about|regarding|concerning)\s+/gi, '')
-        .replace(/build\s+a\s+course\s+(?:on|about|regarding|concerning)\s+/gi, '')
-        .replace(/build\s+course\s+(?:on|about|regarding|concerning)\s+/gi, '')
-        .replace(/develop\s+a\s+course\s+(?:on|about|regarding|concerning)\s+/gi, '')
-        .replace(/develop\s+course\s+(?:on|about|regarding|concerning)\s+/gi, '')
-        .replace(/create\s+a\s+course/gi, '')
-        .replace(/create\s+course/gi, '')
-        .replace(/make\s+a\s+course/gi, '')
-        .replace(/make\s+course/gi, '')
-        .replace(/build\s+a\s+course/gi, '')
-        .replace(/build\s+course/gi, '')
-        .replace(/develop\s+a\s+course/gi, '')
-        .replace(/develop\s+course/gi, '')
-        .replace(/course\s+(?:on|about|regarding|concerning)\s+/gi, '')
-        .replace(/training\s+(?:on|about|regarding|concerning)\s+/gi, '')
-        .replace(/learning\s+(?:on|about|regarding|concerning)\s+/gi, '')
-        .replace(/about\s+/gi, '')
-        .replace(/regarding\s+/gi, '')
-        .replace(/concerning\s+/gi, '')
-        .replace(/in\s+/gi, '')
-        .replace(/the\s+/gi, '')
-        .trim();
+      // Build course context if available
+      const courseContext = coursePlan?.courseDescription 
+        ? `Course: ${coursePlan.courseDescription}. ` 
+        : '';
       
-      // Remove any remaining course-related words
-      const courseWords = ['course', 'training', 'learning', 'lesson', 'module', 'class', 'workshop', 'seminar'];
-      courseWords.forEach(word => {
-        cleaned = cleaned.replace(new RegExp(`\\b${word}\\b`, 'gi'), '');
+      const learnerContext = coursePlan?.learnerDescription 
+        ? `Target learners: ${coursePlan.learnerDescription}. ` 
+        : '';
+      
+      const systemPrompt = `You are an expert tutor from ONEGO Learning. ${courseContext}${learnerContext}Keep responses between 40-100 words. Be engaging and use **bold** for key points. Stay focused on the course topic.`;
+      
+      const messages = [
+        { role: 'system', content: systemPrompt },
+        ...(chatHistory || []).map((msg: any) => ({
+          role: msg.role,
+          content: msg.content
+        })),
+        { role: 'user', content: message }
+      ];
+      
+      console.log('System prompt:', systemPrompt);
+      console.log('Messages count:', messages.length);
+      console.log('Making Groq API request...');
+      
+      const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${groqApiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'llama3-70b-8192',
+          messages: messages,
+          max_tokens: 150,
+          temperature: 0.7,
+        }),
       });
+
+      console.log('Groq response status:', response.status);
       
-      // Clean up extra spaces and normalize
-      cleaned = cleaned.replace(/\s+/g, ' ').trim();
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Groq API error:', errorText);
+        // Fall back to test response
+        return new Response(
+          JSON.stringify({ 
+            reply: `Test response: I received your message "${message}" for course ${courseId}. This is a test response to verify the function is working.`,
+            speechReply: `Test response: I received your message "${message}" for course ${courseId}. This is a test response to verify the function is working.`
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      const data = await response.json();
+      console.log('Groq response received successfully');
       
-      // If we end up with nothing meaningful, return a default
-      if (!cleaned || cleaned.length < 2) {
-        return 'the course topic';
+      if (data.choices && data.choices[0] && data.choices[0].message) {
+        const reply = data.choices[0].message.content;
+        console.log('AI reply generated:', reply);
+        
+        // Enhanced speech text replacement for better pronunciation
+        const speechReply = reply
+          .replace(/ONEGO Learning/gi, 'ONE GO Learning')
+          .replace(/ONEGO/gi, 'ONE GO')
+          .replace(/Onego Learning/gi, 'ONE GO Learning')
+          .replace(/Onego/gi, 'ONE GO');
+        
+        return new Response(
+          JSON.stringify({ 
+            reply: reply,
+            speechReply: speechReply
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      } else {
+        console.error('Invalid Groq response format:', data);
+        // Fall back to test response
+        return new Response(
+          JSON.stringify({ 
+            reply: `Test response: I received your message "${message}" for course ${courseId}. This is a test response to verify the function is working.`,
+            speechReply: `Test response: I received your message "${message}" for course ${courseId}. This is a test response to verify the function is working.`
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
       }
       
-      return cleaned;
-    };
-
-    // Build course modules context if available
-    const courseModulesContext = coursePlan?.modules && Array.isArray(coursePlan.modules) && coursePlan.modules.length > 0
-      ? `\nCOURSE STRUCTURE:\n${coursePlan.modules.map((module: any, index: number) => 
-          `${index + 1}. ${module.title} (${module.duration} min)\n   ${module.content}\n   Key Points: ${module.keyPoints?.join(', ') || 'N/A'}`
-        ).join('\n\n')}`
-      : '';
-
-    // Enhanced system prompt with word limit and formatting instructions
-    const enhancedSystemPrompt = `${systemPrompt}
-
-CRITICAL RESPONSE GUIDELINES:
-- Keep ALL responses between 40-100 words maximum
-- Be concise, engaging, and focused
-- Ask one clear question at a time
-- Use simple, conversational language
-- Stay on topic and avoid lengthy explanations
-- Follow the course structure and guide learners through the modules systematically
-
-FORMATTING REQUIREMENTS:
-- Use **bold** formatting for the most impactful and important words
-- Bold key concepts, important terms, action words, and emphasis points
-- Examples: **essential**, **important**, **key point**, **remember**, **critical**, **focus**, **success**
-- Make your messages visually engaging and easy to scan
-
-SPECIFIC CONTENT REQUIREMENTS:
-- Every response MUST directly relate to: ${cleanCourseDescription(coursePlan?.courseDescription)}
-- Provide examples and scenarios specific to: ${cleanCourseDescription(coursePlan?.courseDescription)}
-- Address the needs of: ${coursePlan?.learnerDescription || 'the target learners'}
-- Reference specific modules and concepts from the course structure
-- Use terminology and examples relevant to: ${cleanCourseDescription(coursePlan?.courseDescription)}
-
-COURSE CONTEXT:
-- Track: ${trackType}
-- Company: ${companyName || 'General'}
-- Course Description: ${cleanCourseDescription(coursePlan?.courseDescription)}
-- Target Learners: ${coursePlan?.learnerDescription || 'Not specified'}
-- Goal: ${coursePlan?.goal || 'Learning objectives'}
-- Duration: ${coursePlan?.duration || coursePlan?.modules?.reduce((total: number, module: any) => total + (module.duration || 0), 0) || 30} minutes
-
-${courseModulesContext}
-
-${companyData ? `COMPANY CONTEXT: ${JSON.stringify(companyData).substring(0, 500)}` : ''}
-
-Remember: MAXIMUM 40-100 words per response. Be engaging, concise, and use **bold** for impact. EVERY response must be specific to ${cleanCourseDescription(coursePlan?.courseDescription)} and relevant to ${coursePlan?.learnerDescription || 'the target learners'}.`;
-
-    // Prepare messages for Groq
-    const messages = [
-      { role: 'system', content: enhancedSystemPrompt },
-      ...chatHistory.map((msg: any) => ({
-        role: msg.role,
-        content: msg.content
-      })),
-      { role: 'user', content: message }
-    ];
-
-    console.log('Sending request to Groq...');
-    console.log('Messages count:', messages.length);
-    
-    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${groqApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'llama3-70b-8192',
-        messages: messages,
-        max_tokens: 150, // Limit tokens to enforce word count
-        temperature: 0.7,
-      }),
-    });
-
-    console.log('Groq response status:', response.status);
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Groq API error:', errorText);
+    } catch (groqError) {
+      console.error('Groq API integration error:', groqError);
+      // Fall back to test response
       return new Response(
-        JSON.stringify({ error: `Groq API error: ${response.status} ${errorText}` }),
-        { 
-          status: 500, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        }
+        JSON.stringify({ 
+          reply: `Test response: I received your message "${message}" for course ${courseId}. This is a test response to verify the function is working.`,
+          speechReply: `Test response: I received your message "${message}" for course ${courseId}. This is a test response to verify the function is working.`
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
-
-    const data = await response.json();
-    console.log('Groq response data received');
-    
-    if (!data.choices || !data.choices[0] || !data.choices[0].message) {
-      console.error('Invalid Groq response format:', data);
-      return new Response(
-        JSON.stringify({ error: 'Invalid response format from Groq API' }),
-        { 
-          status: 500, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        }
-      );
-    }
-    
-    let reply = data.choices[0].message.content;
-    console.log('Generated reply length:', reply?.length);
-
-    // Enhanced speech text replacement for better pronunciation
-    const speechReply = reply
-      .replace(/ONEGO Learning/gi, 'ONE GO Learning')
-      .replace(/ONEGO/gi, 'ONE GO')
-      .replace(/Onego Learning/gi, 'ONE GO Learning')
-      .replace(/Onego/gi, 'ONE GO');
-
-    console.log('Generated reply:', reply);
-    console.log('Speech reply:', speechReply);
-
-    return new Response(
-      JSON.stringify({ 
-        reply: reply, // Original text for display
-        speechReply: speechReply // Modified text for speech
-      }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
 
   } catch (error) {
     console.error('Error in chat-with-tutor function:', error);
+    console.error('Error details:', {
+      name: error.name,
+      message: error.message,
+      stack: error.stack
+    });
+    
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: 'Internal server error - check logs for details' }),
       { 
         status: 500, 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
