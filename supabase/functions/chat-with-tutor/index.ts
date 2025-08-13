@@ -110,7 +110,7 @@ serve(async (req) => {
         ? `Target learners: ${coursePlan.learnerDescription}. ` 
         : '';
       
-      const systemPrompt = `You are an expert tutor from ONEGO Learning. ${courseContext}${learnerContext}Keep responses between 40-100 words. Be engaging and use **bold** for key points. Stay focused on the course topic.`;
+      const systemPrompt = `You are an expert tutor from ONEGO Learning. ${courseContext}${learnerContext}Keep responses between 100-300 words for comprehensive explanations. Be engaging and use **bold** for key points. Stay focused on the course topic and provide detailed, helpful responses.`;
       
       const messages = [
         { role: 'system', content: systemPrompt },
@@ -134,7 +134,7 @@ serve(async (req) => {
         body: JSON.stringify({
           model: 'llama3-70b-8192',
           messages: messages,
-          max_tokens: 150,
+          max_tokens: 800,
           temperature: 0.7,
         }),
       });
