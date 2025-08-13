@@ -173,7 +173,7 @@ const TutoringSession: React.FC<TutoringSessionProps> = ({ course, user, onEnd, 
   const firstName = user.full_name?.split(' ')[0] || 'there';
   const companyName = enhancedCompanyContext?.company_name || 'your company';
 
-  const inputsDisabled = loading || isSpeaking || isGeneratingVoice;
+  const inputsDisabled = loading;
 
   const updateProgress = async (userInteractionCount: number) => {
     try {
@@ -678,124 +678,58 @@ const TutoringSession: React.FC<TutoringSessionProps> = ({ course, user, onEnd, 
     }
   };
 
-  const speakMessage = async (text: string, speechText: string | undefined, messageIndex: number) => {
-    // Add guards to prevent execution when muted or audio disabled
+  const speakMessage = async (text: string, speechText?: string, messageIndex?: number) => {
     if (!audioEnabled || isMuted) {
-      console.log('Audio disabled or muted, only showing text streaming');
-      setStreamingMessageIndex(messageIndex);
       startTextStreaming(text);
       return;
     }
-    
-    console.log(`Speaking message ${messageIndex}, audio context state:`, audioContextManager.getState());
-    
-    if (isAudioContextSuspended() && isIOSDevice) {
-      console.log('Audio context suspended, storing audio for manual playback');
-      setPendingAudioData({ text, speechText, messageIndex });
-      setShowManualPlayButton(true);
-      setStreamingMessageIndex(messageIndex);
-      startTextStreaming(text);
-      return;
-    }
-    
-    if (isSpeaking) {
-      console.log('Already speaking, skipping');
-      return;
-    }
-    
-    setIsGeneratingVoice(true);
-    setStreamingMessageIndex(messageIndex);
-    setShowManualPlayButton(false);
-    
+
     try {
-      const textForSpeech = speechText || text;
+      setIsSpeaking(true);
+      setIsGeneratingVoice(true);
       
-      // Clean the text using our new sanitization function
-      const cleanText = sanitizeForTTS(textForSpeech)
-        .replace(/\*\*(.*?)\*\*/g, '$1')
-        .replace(/\*(.*?)\*/g, '$1')
-        .replace(/^\* /gm, '')
-        .replace(/\n\s*\* /g, ', ')
-        .replace(/\* ([^\n]+)\n\* ([^\n]+)\n\* ([^\n]+)/g, '$1, $2, and $3')
-        .replace(/\* ([^\n]+)\n\* ([^\n]+)/g, '$1 and $2')
-        .replace(/\s\*\s*/g, ' ')
-        .replace(/\n+/g, ' ')
-        .replace(/\s+/g, ' ')
-        .trim();
-      
-      console.log('Original text for TTS:', textForSpeech);
-      console.log('Cleaned text for TTS:', cleanText);
-      
+      // Generate speech for the message
       const response = await supabase.functions.invoke('text-to-speech', {
-        body: { 
-          text: cleanText,
-          voice: isNia ? 'nova' : 'alloy'
-        }
+        body: { text: speechText || text }
       });
 
-      setIsGeneratingVoice(false);
+      if (response.error) throw new Error(response.error);
 
-      // Check again if audio is still enabled/unmuted after async operation
-      if (!audioEnabled || isMuted) {
-        console.log('Audio was disabled/muted during generation, not playing');
-        startTextStreaming(text);
-        return;
-      }
-
-      if (response.data?.audioContent) {
-        setPendingAudioData({ 
-          text, 
-          speechText, 
-          messageIndex, 
-          audioData: response.data.audioContent 
-        });
-
-        const audio = createCompatibleAudio(response.data.audioContent, 'audio/mp3');
+      const audioData = response.data.audio;
+      
+      if (audioData) {
+        const audio = createCompatibleAudio(audioData, 'audio/mp3');
         currentAudioRef.current = audio;
         
         audio.oncanplaythrough = async () => {
-          console.log('Audio ready to play');
-          
-          // Final check before playing
-          if (!audioEnabled || isMuted) {
-            console.log('Audio disabled/muted, not playing');
-            startTextStreaming(text);
-            return;
-          }
-          
           try {
-            const playbackSuccess = await playAudioWithContext(audio);
-            
-            if (playbackSuccess) {
-              setIsSpeaking(true);
-              const estimatedDuration = audio.duration || (cleanText.length * 0.05);
-              startTextStreaming(text, estimatedDuration);
-              setShowManualPlayButton(false);
-            } else {
-              console.log('Automatic playback failed, showing manual button');
-              setShowManualPlayButton(true);
-              startTextStreaming(text);
-            }
+            await audio.play();
+            setIsGeneratingVoice(false);
+            setStreamingText('');
+            setStreamingMessageIndex(-1);
+            setShowManualPlayButton(false);
           } catch (error) {
-            console.error('Playback error:', error);
+            console.error('Audio play failed:', error);
+            // Reset all audio states on error
+            setIsSpeaking(false);
+            setIsGeneratingVoice(false);
+            setStreamingText('');
+            setStreamingMessageIndex(-1);
             setShowManualPlayButton(true);
             startTextStreaming(text);
           }
         };
         
         audio.onended = () => {
-          console.log('Audio playback ended');
           setIsSpeaking(false);
+          setIsGeneratingVoice(false);
           setStreamingText('');
           setStreamingMessageIndex(-1);
-          if (streamingIntervalRef.current) {
-            clearInterval(streamingIntervalRef.current);
-            streamingIntervalRef.current = null;
-          }
+          startTextStreaming(text);
         };
         
-        audio.onerror = (error) => {
-          console.error('Audio element error:', error);
+        audio.onerror = () => {
+          // Reset all audio states on error
           setIsSpeaking(false);
           setIsGeneratingVoice(false);
           setStreamingText('');
@@ -811,6 +745,7 @@ const TutoringSession: React.FC<TutoringSessionProps> = ({ course, user, onEnd, 
       }
     } catch (error) {
       console.error('Error with text-to-speech:', error);
+      // Reset all audio states on error
       setIsSpeaking(false);
       setIsGeneratingVoice(false);
       setStreamingText('');
@@ -1177,9 +1112,23 @@ Keep responses between 40-100 words. Be engaging and use **bold** for key points
       }
     } catch (error) {
       console.error('Error sending message:', error);
+      
+      // Reset all states that could block input
+      setLoading(false);
+      setIsSpeaking(false);
+      setIsGeneratingVoice(false);
+      
+      let errorMessage = "Could not send message. Please try again.";
+      
+      if (error.message?.includes('timeout') || error.message?.includes('fetch')) {
+        errorMessage = "Request timed out. Please check your connection and try again.";
+      } else if (error.message?.includes('rate limit')) {
+        errorMessage = "Too many requests. Please wait a moment and try again.";
+      }
+      
       toast({
         title: "Chat Error",
-        description: "Could not send message. Please try again.",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
@@ -1354,7 +1303,7 @@ Keep responses between 40-100 words. Be engaging and use **bold** for key points
               <span className="hidden sm:inline">Chat</span>
             </button>
             <button
-              onClick={() => setMode('reading' as 'reading')}
+              onClick={() => setMode('reading')}
               className={`px-2 sm:px-3 py-1 rounded-md text-xs sm:text-sm font-medium transition-colors ${
                 mode === 'reading'
                   ? 'bg-white text-gray-900 shadow-sm'
