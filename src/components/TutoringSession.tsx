@@ -690,12 +690,15 @@ const TutoringSession: React.FC<TutoringSessionProps> = ({ course, user, onEnd, 
       
       // Generate speech for the message
       const response = await supabase.functions.invoke('text-to-speech', {
-        body: { text: speechText || text }
+        body: { 
+          text: speechText || text,
+          voice: isNia ? 'nova' : 'alloy'
+        }
       });
 
       if (response.error) throw new Error(response.error);
 
-      const audioData = response.data.audio;
+      const audioData = response.data.audioContent;
       
       if (audioData) {
         const audio = createCompatibleAudio(audioData, 'audio/mp3');
@@ -1322,7 +1325,7 @@ Keep responses between 40-100 words. Be engaging and use **bold** for key points
       )}
 
       {/* Messages Container */}
-      <div className="flex-1 overflow-y-auto p-3 sm:p-4 md:p-6 space-y-3 sm:space-y-4 min-h-0">
+      <div className="flex-1 overflow-y-auto p-3 sm:p-4 md:p-6 space-y-3 sm:space-y-4" style={{ height: 'calc(100vh - 300px)' }}>
         {messages.length === 0 && (
           <div className="text-center text-gray-500 mt-8 sm:mt-10">
             <p className="text-sm sm:text-base">Starting your session...</p>
@@ -1343,7 +1346,7 @@ Keep responses between 40-100 words. Be engaging and use **bold** for key points
             >
               {message.role === 'assistant' && (
                 <div className="flex items-center mb-2">
-                  <div className="w-8 h-8 sm:w-12 sm:w-12 md:w-16 md:h-16 rounded-full overflow-hidden mr-2 sm:mr-3">
+                  <div className="w-8 h-8 sm:w-12 sm:h-12 md:w-16 md:h-16 rounded-full overflow-hidden mr-2 sm:mr-3">
                     <img 
                       src={isNia ? "/lovable-uploads/1ea99c8a-1f92-4867-8dd3-dcdadc7cdd90.png" : "/lovable-uploads/dd6e7370-e1f2-4c57-87f4-d82781703687.png"} 
                       alt={tutorPersona}
@@ -1407,7 +1410,7 @@ Keep responses between 40-100 words. Be engaging and use **bold** for key points
           <div className="flex justify-start">
             <div className="bg-white text-gray-900 border px-3 sm:px-4 py-2 rounded-lg">
               <div className="flex items-center">
-                <div className="w-8 h-8 sm:w-12 sm:w-12 md:w-16 md:h-16 rounded-full overflow-hidden mr-2 sm:mr-3">
+                <div className="w-8 h-8 sm:w-12 sm:h-12 md:w-16 md:h-16 rounded-full overflow-hidden mr-2 sm:mr-3">
                   <img 
                     src={isNia ? "/lovable-uploads/1ea99c8a-1f92-4867-8dd3-dcdadc7cdd90.png" : "/lovable-uploads/dd6e7370-e1f2-4c57-87f4-d82781703687.png"} 
                     alt={tutorPersona}
