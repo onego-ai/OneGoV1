@@ -1206,7 +1206,7 @@ IMPORTANT: Provide direct, helpful answers. Do NOT ask users to choose between o
   }
 
   return (
-    <div className="flex flex-col h-screen bg-gray-50">
+    <div className="flex flex-col h-screen bg-gray-50" style={{ height: '100vh', maxHeight: '100vh' }}>
       {/* Header - Mobile Optimized */}
       <div className="bg-white border-b px-3 sm:px-4 md:px-6 py-2 sm:py-3 md:py-4 flex items-center justify-between flex-shrink-0">
         <div className="flex-1 min-w-0 mr-2 sm:mr-4">
@@ -1324,8 +1324,8 @@ IMPORTANT: Provide direct, helpful answers. Do NOT ask users to choose between o
         </div>
       )}
 
-      {/* Messages Container */}
-      <div className="flex-1 overflow-y-auto p-3 sm:p-4 md:p-6 space-y-3 sm:space-y-4" style={{ height: 'calc(100vh - 300px)' }}>
+      {/* Messages Container - Fixed scrolling */}
+      <div className="flex-1 overflow-y-auto p-3 sm:p-4 md:p-6 space-y-3 sm:space-y-4 min-h-0" style={{ height: '0px' }}>
         {messages.length === 0 && (
           <div className="text-center text-gray-500 mt-8 sm:mt-10">
             <p className="text-sm sm:text-base">Starting your session...</p>
