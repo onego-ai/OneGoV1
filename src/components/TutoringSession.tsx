@@ -1187,65 +1187,7 @@ Keep responses between 40-100 words. Be engaging and use **bold** for key points
     localStorage.removeItem(`session_${course.id}`);
   };
 
-  // Debug function to test chat
-  const testChatFunction = async () => {
-    try {
-      console.log('Testing chat function...');
-      console.log('Course data:', {
-        id: course.id,
-        title: course.course_title,
-        system_prompt: course.system_prompt,
-        course_plan: course.course_plan
-      });
-      
-      const testResponse = await supabase.functions.invoke('chat-with-tutor', {
-        body: {
-          message: "Test message",
-          chatHistory: [],
-          systemPrompt: course.system_prompt || "You are a helpful tutor.",
-          courseId: course.id,
-          userId: user.id,
-          userName: user.full_name,
-          coursePlan: course.course_plan,
-          trackType: course.track_type,
-          companyName: companyName,
-          companyData: companyWebsiteData
-        }
-      });
-      
-      console.log('Test response:', testResponse);
-      console.log('Test response data:', testResponse.data);
-      console.log('Test response error:', testResponse.error);
-      
-      if (testResponse.error) {
-        toast({
-          title: "Test Failed",
-          description: `Error: ${testResponse.error.message}`,
-          variant: "destructive",
-        });
-      } else if (testResponse.data?.reply) {
-        console.log('Reply received:', testResponse.data.reply);
-        toast({
-          title: "Test Successful",
-          description: `Chat function is working! Reply: ${testResponse.data.reply.substring(0, 50)}...`,
-        });
-      } else {
-        console.log('No reply in data:', testResponse.data);
-        toast({
-          title: "Test Failed",
-          description: "No reply received from function",
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
-      console.error('Test error:', error);
-      toast({
-        title: "Test Error",
-        description: error instanceof Error ? error.message : "Unknown error",
-        variant: "destructive",
-      });
-    }
-  };
+
 
   // Show reading mode if selected
   if (mode === 'reading') {
@@ -1279,14 +1221,7 @@ Keep responses between 40-100 words. Be engaging and use **bold** for key points
           </p>
         </div>
         
-        {/* Debug button - remove in production */}
-        <button
-          onClick={testChatFunction}
-          className="px-2 sm:px-3 py-1 text-xs bg-yellow-500 text-white rounded hover:bg-yellow-600"
-          title="Test chat function"
-        >
-          Test Chat
-        </button>
+
         
         <div className="flex items-center space-x-1 sm:space-x-2 flex-shrink-0">
           {/* Mode Toggle */}
