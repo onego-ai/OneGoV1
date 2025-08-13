@@ -1005,7 +1005,7 @@ COURSE: ${course.course_title}
 GOAL: ${course.course_plan?.goal || 'Help learners understand the course content'}
 TARGET: ${course.course_plan?.learnerDescription || 'Learners'}
 
-Keep responses between 40-100 words. Be engaging and use **bold** for key points. Stay focused on the course topic.`;
+IMPORTANT: Provide direct, helpful answers. Do NOT ask users to choose between options or responses. Do NOT ask "What would you like to learn about?" Give comprehensive explanations (40-100 words) with specific examples. Use **bold** for key points. Stay focused on the course topic and provide actionable learning. Be directive - guide the learning, don't ask for direction.`;
 
       console.log('System prompt length:', enhancedSystemPrompt.length);
       console.log('Chat history length:', messages.length);
