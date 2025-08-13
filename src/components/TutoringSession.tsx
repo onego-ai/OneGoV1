@@ -1205,7 +1205,7 @@ Keep responses between 40-100 words. Be engaging and use **bold** for key points
   return (
     <div className="flex flex-col h-screen bg-gray-50">
       {/* Header - Mobile Optimized */}
-      <div className="bg-white border-b px-3 sm:px-4 md:px-6 py-2 sm:py-3 md:py-4 flex items-center justify-between">
+      <div className="bg-white border-b px-3 sm:px-4 md:px-6 py-2 sm:py-3 md:py-4 flex items-center justify-between flex-shrink-0">
         <div className="flex-1 min-w-0 mr-2 sm:mr-4">
           <h1 className="text-base sm:text-lg md:text-xl font-semibold text-gray-900 truncate">
             {course.course_title}
@@ -1288,7 +1288,7 @@ Keep responses between 40-100 words. Be engaging and use **bold** for key points
 
       {/* iOS Audio Status Banner */}
       {isIOSDevice && (showManualPlayButton || audioRequiresUserInteraction) && (
-        <div className="bg-blue-50 border-b border-blue-200 px-3 sm:px-4 py-2 sm:py-3">
+        <div className="bg-blue-50 border-b border-blue-200 px-3 sm:px-4 py-2 sm:py-3 flex-shrink-0">
           <div className="flex items-center justify-between">
             <div className="flex-1">
               <p className="text-blue-800 text-xs sm:text-sm">
@@ -1314,7 +1314,7 @@ Keep responses between 40-100 words. Be engaging and use **bold** for key points
 
       {/* Microphone Permission Banner */}
       {isMobileDevice && microphonePermission === false && (
-        <div className="bg-orange-50 border-b border-orange-200 px-3 sm:px-4 py-2 sm:py-3">
+        <div className="bg-orange-50 border-b border-orange-200 px-3 sm:px-4 py-2 sm:py-3 flex-shrink-0">
           <p className="text-orange-800 text-xs sm:text-sm">
             Microphone access is required for voice input. Please enable it in your browser settings and refresh the page.
           </p>
@@ -1322,7 +1322,7 @@ Keep responses between 40-100 words. Be engaging and use **bold** for key points
       )}
 
       {/* Messages Container */}
-      <div className="flex-1 overflow-y-auto p-3 sm:p-4 md:p-6 space-y-3 sm:space-y-4">
+      <div className="flex-1 overflow-y-auto p-3 sm:p-4 md:p-6 space-y-3 sm:space-y-4 min-h-0">
         {messages.length === 0 && (
           <div className="text-center text-gray-500 mt-8 sm:mt-10">
             <p className="text-sm sm:text-base">Starting your session...</p>
@@ -1343,7 +1343,7 @@ Keep responses between 40-100 words. Be engaging and use **bold** for key points
             >
               {message.role === 'assistant' && (
                 <div className="flex items-center mb-2">
-                  <div className="w-8 h-8 sm:w-12 sm:h-12 md:w-16 md:h-16 rounded-full overflow-hidden mr-2 sm:mr-3">
+                  <div className="w-8 h-8 sm:w-12 sm:w-12 md:w-16 md:h-16 rounded-full overflow-hidden mr-2 sm:mr-3">
                     <img 
                       src={isNia ? "/lovable-uploads/1ea99c8a-1f92-4867-8dd3-dcdadc7cdd90.png" : "/lovable-uploads/dd6e7370-e1f2-4c57-87f4-d82781703687.png"} 
                       alt={tutorPersona}
@@ -1407,7 +1407,7 @@ Keep responses between 40-100 words. Be engaging and use **bold** for key points
           <div className="flex justify-start">
             <div className="bg-white text-gray-900 border px-3 sm:px-4 py-2 rounded-lg">
               <div className="flex items-center">
-                <div className="w-8 h-8 sm:w-12 sm:h-12 md:w-16 md:h-16 rounded-full overflow-hidden mr-2 sm:mr-3">
+                <div className="w-8 h-8 sm:w-12 sm:w-12 md:w-16 md:h-16 rounded-full overflow-hidden mr-2 sm:mr-3">
                   <img 
                     src={isNia ? "/lovable-uploads/1ea99c8a-1f92-4867-8dd3-dcdadc7cdd90.png" : "/lovable-uploads/dd6e7370-e1f2-4c57-87f4-d82781703687.png"} 
                     alt={tutorPersona}
@@ -1428,7 +1428,7 @@ Keep responses between 40-100 words. Be engaging and use **bold** for key points
       </div>
 
       {/* Input Area */}
-      <div className="bg-white border-t p-3 sm:p-4">
+      <div className="bg-white border-t p-3 sm:p-4 flex-shrink-0">
         <div className="flex items-center space-x-2">
           <div className="relative">
             <button
