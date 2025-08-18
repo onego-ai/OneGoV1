@@ -213,7 +213,7 @@ const CourseEditor: React.FC<CourseEditorProps> = ({ course, user, onBack, onSav
   const [loading, setLoading] = useState(false);
   const [quizzes, setQuizzes] = useState<Quiz[]>([]);
   const [expandedQuizIds, setExpandedQuizIds] = useState<Set<string>>(new Set());
-  const [generatingQuizzes, setGeneratingQuizzes] = useState(false);
+
   const { toast } = useToast();
   // Auto-save disabled: quizzes will be saved only via Save Changes
 
@@ -404,67 +404,7 @@ const CourseEditor: React.FC<CourseEditorProps> = ({ course, user, onBack, onSav
     }
   };
 
-  const generateQuizzesFromModules = async () => {
-    try {
-      setGeneratingQuizzes(true);
-      // Build questions using the same edge function used in reader
-      const questions: QuizQuestion[] = [];
-      for (const module of modules) {
-        try {
-          const response = await fetch('https://yzgxmmgghoiiyddebwrr.supabase.co/functions/v1/generate-quiz', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY || ''}`,
-            },
-            body: JSON.stringify({
-              sectionTitle: module.title,
-              sectionContent: module.content,
-              keyPoints: module.keyPoints,
-              numberOfQuestions: 2,
-              courseTopic: course.course_plan?.courseDescription || course.course_title
-            })
-          });
-          if (response.ok) {
-            const data = await response.json();
-            if (data.success && Array.isArray(data.questions)) {
-              questions.push(...data.questions);
-            }
-          }
-        } catch (err) {
-          console.error('Quiz generation failed for module:', module.title, err);
-        }
-      }
-      // Fallback if no questions generated
-      if (questions.length === 0) {
-        for (const module of modules) {
-          questions.push({
-            id: `fallback-${module.id}-0`,
-            question: `What is the main idea of "${module.title}"?`,
-            options: [
-              `Understanding ${module.title.toLowerCase()}`,
-              `Advanced ${module.title.toLowerCase()}`,
-              `Irrelevant concept`,
-              `None of the above`
-            ],
-            correctAnswer: 0,
-            explanation: `This module focuses on understanding ${module.title}.`
-          });
-        }
-      }
-      const newQuizzes: Quiz[] = [
-        { id: 'quiz-1', title: 'Knowledge Check 1', questions }
-      ];
-      setQuizzes(newQuizzes);
-      // Do not persist now; user must click Save Changes
-      toast({ title: 'Quizzes generated', description: 'Remember to click "Save Changes" to persist your quiz.' });
-    } catch (e) {
-      console.error(e);
-      toast({ title: 'Generation failed', description: 'Could not generate quizzes.', variant: 'destructive' });
-    } finally {
-      setGeneratingQuizzes(false);
-    }
-  };
+
 
   // Quiz editing helpers
   const toggleQuizExpansion = (quizId: string) => {
@@ -666,15 +606,9 @@ const CourseEditor: React.FC<CourseEditorProps> = ({ course, user, onBack, onSav
       <div className="bg-white border border-gray-200 rounded-lg p-6 mt-6">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-semibold text-gray-900">Quizzes</h2>
-          {quizzes.length === 0 && (
-            <button
-              onClick={generateQuizzesFromModules}
-              disabled={generatingQuizzes}
-              className="px-4 py-2 bg-green-500 text-white rounded-lg font-medium hover:bg-green-600 disabled:opacity-50"
-            >
-              {generatingQuizzes ? 'Generating...' : 'Generate Quizzes'}
-            </button>
-          )}
+          <div className="text-sm text-gray-500">
+            Quizzes are automatically generated with your course
+          </div>
         </div>
         {quizzes.length === 0 ? (
           <div className="text-center py-8 text-gray-500">

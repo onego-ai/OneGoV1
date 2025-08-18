@@ -1091,6 +1091,134 @@ Remember to focus on ${courseDescription} while building a strong foundation in 
     }
   };
 
+  // Function to generate quizzes for the course
+  const generateQuizzesForCourse = async (modules: any[], numberOfQuizzes: number, courseDescription: string) => {
+    console.log('generateQuizzesForCourse called with:', { modules, numberOfQuizzes, courseDescription });
+    const quizzes = [];
+    
+    for (let i = 0; i < numberOfQuizzes; i++) {
+      const quizModules = modules.slice(i * Math.ceil(modules.length / numberOfQuizzes), (i + 1) * Math.ceil(modules.length / numberOfQuizzes));
+      const quizTitle = `Knowledge Check ${i + 1}`;
+      const questions = [];
+      console.log(`Generating quiz ${i + 1} with ${quizModules.length} modules`);
+
+      // Generate AI-powered questions for each module
+      for (const module of quizModules) {
+        try {
+          console.log(`Generating AI quiz questions for module: ${module.title}`);
+          
+          const response = await supabase.functions.invoke('generate-quiz', {
+            body: {
+              sectionTitle: module.title,
+              sectionContent: module.content,
+              keyPoints: module.keyPoints || [],
+              numberOfQuestions: 2, // 2 questions per module
+              courseTopic: courseDescription
+            }
+          });
+
+          if (response.error) {
+            console.error('Failed to generate AI quiz questions:', response.error);
+            // Fallback to basic questions if AI generation fails
+            questions.push(createFallbackQuestion(module, questions.length));
+            continue;
+          }
+
+          if (response.data && response.data.success && response.data.questions) {
+            console.log(`Generated ${response.data.questions.length} AI questions for module: ${module.title}`);
+            questions.push(...response.data.questions);
+          } else {
+            console.error('Invalid response from AI quiz generation:', response.data);
+            questions.push(createFallbackQuestion(module, questions.length));
+          }
+        } catch (error) {
+          console.error('Error generating AI quiz questions:', error);
+          questions.push(createFallbackQuestion(module, questions.length));
+        }
+      }
+
+      // Ensure we have at least 3 questions per quiz
+      while (questions.length < 3) {
+        questions.push({
+          id: `fallback-${i}-${questions.length}`,
+          question: `What is the primary goal of this course?`,
+          options: [
+            'To provide comprehensive understanding of core concepts',
+            'To offer advanced technical skills only',
+            'To introduce basic concepts without depth',
+            'To focus on theoretical knowledge only'
+          ],
+          correctAnswer: 0,
+          explanation: 'The course aims to provide a comprehensive understanding of core concepts.'
+        });
+      }
+
+      quizzes.push({
+        id: `quiz-${i + 1}`,
+        title: quizTitle,
+        questions: questions.slice(0, 5), // Limit to 5 questions per quiz
+        isCompleted: false
+      });
+    }
+    
+    console.log('Final generated quizzes:', quizzes);
+    
+    // Ensure we always return at least one quiz with basic questions
+    if (quizzes.length === 0) {
+      console.log('No quizzes generated, creating fallback quiz');
+      const fallbackQuiz = {
+        id: 'quiz-fallback',
+        title: 'Knowledge Check',
+        questions: [
+          {
+            id: 'fallback-1',
+            question: 'What is the primary goal of this course?',
+            options: [
+              'To provide comprehensive understanding of core concepts',
+              'To offer advanced technical skills only',
+              'To introduce basic concepts without depth',
+              'To focus on theoretical knowledge only'
+            ],
+            correctAnswer: 0,
+            explanation: 'The course aims to provide a comprehensive understanding of core concepts.'
+          },
+          {
+            id: 'fallback-2',
+            question: 'Which of the following best describes this course?',
+            options: [
+              'A comprehensive learning experience',
+              'A basic introduction only',
+              'Advanced technical training',
+              'Theoretical concepts only'
+            ],
+            correctAnswer: 0,
+            explanation: 'This course provides a comprehensive learning experience.'
+          }
+        ],
+        isCompleted: false
+      };
+      quizzes.push(fallbackQuiz);
+    }
+    
+    return quizzes;
+  };
+
+  // Helper function to create fallback questions when AI generation fails
+  const createFallbackQuestion = (module: any, questionIndex: number) => {
+    return {
+      id: `fallback-${module.id}-${questionIndex}`,
+      question: `What is the main concept discussed in "${module.title}"?`,
+      options: [
+        `Understanding ${module.title.toLowerCase()}`,
+        `Advanced techniques in ${module.title.toLowerCase()}`,
+        `Basic introduction to ${module.title.toLowerCase()}`,
+        `Practical applications of ${module.title.toLowerCase()}`
+      ],
+      correctAnswer: 0,
+      explanation: `This module focuses on understanding the core concept of ${module.title}.`
+    };
+  };
+
   const createCourse = async () => {
     setLoading(true);
     try {
@@ -1159,6 +1287,63 @@ Remember to focus on ${courseDescription} while building a strong foundation in 
       }
 
       console.log('Course created successfully:', courseData);
+      // We'll keep track of the final course object we want to use for redirect/UI
+      let finalCourseData = courseData;
+      
+      // Generate quizzes automatically for the course
+      console.log('Starting quiz generation process...');
+      console.log('formData.numberOfQuizzes:', formData.numberOfQuizzes);
+      console.log('courseModules:', courseModules);
+      console.log('courseDescription:', courseDescription);
+      
+      try {
+        const numberOfQuizzes = formData.numberOfQuizzes || 1;
+        console.log(`Number of quizzes to generate: ${numberOfQuizzes}`);
+        
+        if (numberOfQuizzes > 0) {
+          console.log(`Generating ${numberOfQuizzes} quizzes for the course...`);
+          const generatedQuizzes = await generateQuizzesForCourse(courseModules, numberOfQuizzes, courseDescription);
+          
+          if (generatedQuizzes && generatedQuizzes.length > 0) {
+            // Update the course plan with generated quizzes
+            const updatedCoursePlan = {
+              ...enhancedCoursePlan,
+              quizzes: generatedQuizzes
+            };
+            
+            console.log('Generated quizzes:', generatedQuizzes);
+            console.log('Updated course plan:', updatedCoursePlan);
+            
+            // Update the course in the database with quizzes
+            const { error: updateError } = await supabase
+              .from('courses')
+              .update({ course_plan: updatedCoursePlan })
+              .eq('id', courseData.id);
+              
+            if (updateError) {
+              console.error('Error updating course with quizzes:', updateError);
+              console.error('Update error details:', updateError.details);
+              console.error('Update error hint:', updateError.hint);
+            } else {
+              console.log('Quizzes generated and saved successfully to database');
+              
+              // Update the course data reference so we redirect with quizzes
+              const updatedCourseData = {
+                ...courseData,
+                course_plan: updatedCoursePlan
+              };
+              finalCourseData = updatedCourseData;
+            }
+          } else {
+            console.error('No quizzes were generated');
+          }
+        } else {
+          console.log('No quizzes requested (numberOfQuizzes = 0)');
+        }
+      } catch (quizError) {
+        console.error('Error generating quizzes:', quizError);
+        // Don't fail the course creation if quiz generation fails
+      }
       
       // Credit consumption is now handled automatically by database trigger
       console.log('Credit consumption will be handled automatically by database trigger');
@@ -1166,7 +1351,7 @@ Remember to focus on ${courseDescription} while building a strong foundation in 
       // Dispatch event to notify other components that credits were consumed
       window.dispatchEvent(new CustomEvent('credits-consumed'));
 
-      setCreatedCourse(courseData);
+      setCreatedCourse(finalCourseData);
       setCourseCreated(true);
 
       toast({
@@ -1174,8 +1359,8 @@ Remember to focus on ${courseDescription} while building a strong foundation in 
         description: "Redirecting to the course editor...",
       });
 
-      // Immediately notify parent so it can redirect
-      onCourseCreated(courseData);
+      // Immediately notify parent so it can redirect with quizzes if available
+      onCourseCreated(finalCourseData);
 
     } catch (error: any) {
       console.error('Course creation error:', error);

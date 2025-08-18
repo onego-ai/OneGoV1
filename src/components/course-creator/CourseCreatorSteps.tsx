@@ -99,7 +99,7 @@ const CourseCreatorSteps: React.FC<CourseCreatorStepsProps> = ({
       switch (step) {
         case 1: return 'Tell us what you want to teach and what your course is about.';
         case 2: return 'Describe who will be taking this course and their background.';
-        case 3: return 'Choose how many topics, quizzes, and sections your course will have.';
+        case 3: return 'Choose how many topics and quizzes your course will have. Quizzes are automatically generated based on your course content.';
         case 4: return 'Upload a PDF to extract additional content for your course.';
         default: return '';
       }
@@ -109,7 +109,7 @@ const CourseCreatorSteps: React.FC<CourseCreatorStepsProps> = ({
         case 1: return 'Select the educational level you are teaching to help create age-appropriate content.';
         case 2: return 'Tell us what you want to teach and what your course is about.';
         case 3: return 'Describe who will be taking this course and their background.';
-        case 4: return 'Choose how many topics, quizzes, and sections your course will have.';
+        case 4: return 'Choose how many topics and quizzes your course will have. Quizzes are automatically generated based on your course content.';
         case 5: return 'Upload a PDF to extract additional content for your course.';
         default: return '';
       }

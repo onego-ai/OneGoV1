@@ -280,7 +280,7 @@ const CorporateStepRenderer: React.FC<CorporateStepRendererProps> = ({
 
               <div className="space-y-3 sm:space-y-4">
                 <label className="block text-xs sm:text-sm font-medium text-gray-700 flex items-center">
-                  Number of Quizzes
+                  Number of Quizzes (Auto-generated)
                   {!isProUser && (
                     <div className="flex items-center space-x-1 text-yellow-600 ml-2">
                       <Crown className="h-3 w-3 sm:h-4 sm:w-4" />
@@ -320,7 +320,7 @@ const CorporateStepRenderer: React.FC<CorporateStepRendererProps> = ({
               <h4 className="font-medium text-blue-800 mb-2 text-sm sm:text-base">Course Preview</h4>
               <p className="text-xs sm:text-sm text-blue-700">
                 Your course will have <strong>{formData.numberOfTopics || 3} main topics</strong> with{' '}
-                <strong>{formData.numberOfQuizzes || 1} knowledge checks</strong>.
+                <strong>{formData.numberOfQuizzes || 1} automatically generated knowledge checks</strong>.
               </p>
               {!isProUser && (
                 <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
