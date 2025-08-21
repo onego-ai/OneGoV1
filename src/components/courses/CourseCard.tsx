@@ -125,9 +125,12 @@ const CourseCard: React.FC<CourseCardProps> = ({
                   {module.keyPoints && module.keyPoints.length > 0 && (
                     <div className="text-xs text-gray-500">
                       <span className="font-medium">Key Points:</span>
-                      <ul className="list-disc list-inside mt-1 space-y-1">
+                      <ul className="mt-1 space-y-1">
                         {module.keyPoints.slice(0, 2).map((point: string, pointIndex: number) => (
-                          <li key={pointIndex} className="truncate">{point}</li>
+                          <li key={pointIndex} className="flex items-start space-x-2 truncate">
+                            <span className="text-gray-500 mt-0.5">➜</span>
+                            <span className="truncate">{point}</span>
+                          </li>
                         ))}
                         {module.keyPoints.length > 2 && (
                           <li className="text-gray-400">+{module.keyPoints.length - 2} more</li>

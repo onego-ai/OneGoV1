@@ -10,10 +10,16 @@ const CourseContentRenderer: React.FC<CourseContentRendererProps> = ({ content, 
   const looksLikeHtml = typeof content === 'string' && /<\/?(p|h1|h2|h3|ul|ol|li|strong|em|u|blockquote|code|span|div|br|a)[^>]*>/i.test(content);
 
   if (looksLikeHtml) {
+    // Soft sanitize and lightly convert markdown-like patterns inside HTML content
+    const sanitized = content
+      .replace(/\u2022/g, '➜') // bullet •
+      .replace(/[⭐🌟★☆]/g, '') // remove decorative stars
+      .replace(/\*\s/g, '➜ ') // asterisk bullets to arrows
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>'); // bold
     return (
       <div className={`prose max-w-none ${className}`}>
         <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-4 sm:p-6">
-          <div className="space-y-3 sm:space-y-4" dangerouslySetInnerHTML={{ __html: content }} />
+          <div className="space-y-3 sm:space-y-4" dangerouslySetInnerHTML={{ __html: sanitized }} />
         </div>
       </div>
     );
@@ -41,7 +47,7 @@ const CourseContentRenderer: React.FC<CourseContentRendererProps> = ({ content, 
       if (trimmedLine.startsWith('# ')) {
         return (
           <h1 key={index} className="text-xl sm:text-2xl font-bold text-gray-900 mb-3 sm:mb-4 mt-4 sm:mt-6 first:mt-0">
-            {trimmedLine.substring(2)}
+            {trimmedLine.substring(2).replace(/^[⭐🌟★☆•\-\s]+/, '')}
           </h1>
         );
       }
@@ -50,7 +56,7 @@ const CourseContentRenderer: React.FC<CourseContentRendererProps> = ({ content, 
       if (trimmedLine.startsWith('## ')) {
         return (
           <h2 key={index} className="text-lg sm:text-xl font-semibold text-gray-800 mb-2 sm:mb-3 mt-4 sm:mt-5">
-            {trimmedLine.substring(3)}
+            {trimmedLine.substring(3).replace(/^[⭐🌟★☆•\-\s]+/, '')}
           </h2>
         );
       }
@@ -59,18 +65,18 @@ const CourseContentRenderer: React.FC<CourseContentRendererProps> = ({ content, 
       if (trimmedLine.startsWith('### ')) {
         return (
           <h3 key={index} className="text-base sm:text-lg font-medium text-gray-700 mb-2 mt-3 sm:mt-4">
-            {trimmedLine.substring(4)}
+            {trimmedLine.substring(4).replace(/^[⭐🌟★☆•\-\s]+/, '')}
           </h3>
         );
       }
       
-      // Bullet points (starts with -)
-      if (trimmedLine.startsWith('- ')) {
+      // Bullet points (starts with -, *, •, ⭐)
+      if (trimmedLine.startsWith('- ') || /^(\*|•|⭐)\s+/.test(trimmedLine)) {
         return (
           <div key={index} className="flex items-start space-x-2 mb-2">
-            <span className="text-blue-500 mt-1.5 sm:mt-2 flex-shrink-0">•</span>
+            <span className="text-blue-500 mt-1.5 sm:mt-2 flex-shrink-0">➜</span>
             <span className="text-sm sm:text-base text-gray-700 leading-relaxed">
-              {trimmedLine.substring(2)}
+              {trimmedLine.replace(/^(?:-\s+|\*\s+|•\s+|⭐\s+)/, '')}
             </span>
           </div>
         );

@@ -1141,7 +1141,7 @@ Format as JSON with sections array containing: id, title, content, keyPoints, du
                               )}
                             </div>
                             <h2 className="text-lg sm:text-xl font-semibold text-gray-900">
-                              {section.title}
+                              {section.title?.replace(/^[⭐🌟★☆•\-\s]+/, '')}
                             </h2>
                           </div>
                           
@@ -1160,7 +1160,7 @@ Format as JSON with sections array containing: id, title, content, keyPoints, du
                           <ul className="space-y-1 sm:space-y-2">
                             {section.keyPoints.map((point, pointIndex) => (
                               <li key={pointIndex} className="flex items-start space-x-2">
-                                <span className="text-blue-500 mt-1">•</span>
+                                <ChevronRight className="h-4 w-4 text-blue-500 mt-0.5 flex-shrink-0" />
                                 <span className="text-xs sm:text-sm text-blue-700">{point}</span>
                               </li>
                             ))}
