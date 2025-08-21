@@ -187,11 +187,28 @@ IMPORTANT: Return ONLY valid JSON. No additional text or explanations outside th
       );
     }
 
-    // Add IDs to questions
-    const questionsWithIds = quizData.questions.map((q: any, index: number) => ({
-      ...q,
-      id: `ai-generated-${index + 1}`
-    }));
+    // Normalize questions: ensure id, options, and valid correctAnswer
+    const questionsWithIds = quizData.questions.map((q: any, index: number) => {
+      const options = Array.isArray(q.options) && q.options.length >= 2
+        ? q.options.map((opt: any) => String(opt).trim())
+        : ["Option 1", "Option 2", "Option 3", "Option 4"];
+      // Accept either index or exact option text for correct answer
+      let correct = 0;
+      if (typeof q.correctAnswer === 'number') {
+        correct = q.correctAnswer;
+      } else if (typeof q.correctAnswer === 'string') {
+        const idx = options.findIndex(o => o.toLowerCase() === q.correctAnswer.toLowerCase());
+        correct = idx >= 0 ? idx : 0;
+      }
+      if (correct < 0 || correct >= options.length) correct = 0;
+      return {
+        id: q.id || `ai-generated-${index + 1}`,
+        question: String(q.question || `Question ${index + 1}`),
+        options,
+        correctAnswer: correct,
+        explanation: String(q.explanation || '')
+      } as QuizQuestion;
+    });
 
     console.log(`Successfully generated ${questionsWithIds.length} quiz questions`);
 

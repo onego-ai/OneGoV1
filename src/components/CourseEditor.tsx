@@ -112,7 +112,7 @@ const ModuleEditor = React.memo<ModuleEditorProps>(({
                 autoFocus
               />
             ) : (
-              <h3 className="text-lg font-semibold text-gray-900">{module.title}</h3>
+              <h3 className="text-lg font-semibold text-gray-900">{module.title?.replace(/^[⭐🌟★☆•*\-\s]+/, '')}</h3>
             )}
           </div>
           <div className="flex items-center space-x-2">

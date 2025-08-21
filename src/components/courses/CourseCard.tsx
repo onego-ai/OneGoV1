@@ -118,7 +118,7 @@ const CourseCard: React.FC<CourseCardProps> = ({
               {course.course_plan.modules.map((module: any, index: number) => (
                 <div key={module.id || index} className="bg-gray-50 rounded-lg p-2 sm:p-3">
                   <div className="flex items-start justify-between mb-1 sm:mb-2">
-                    <h5 className="font-medium text-xs sm:text-sm text-gray-800 truncate">{module.title}</h5>
+                    <h5 className="font-medium text-xs sm:text-sm text-gray-800 truncate">{module.title?.replace(/^[⭐🌟★☆•*\-\s]+/, '')}</h5>
                     <span className="text-xs text-gray-500 flex-shrink-0 ml-2">{module.duration} min</span>
                   </div>
                   <p className="text-xs text-gray-600 mb-1 sm:mb-2 line-clamp-2">{module.content}</p>

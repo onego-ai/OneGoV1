@@ -222,9 +222,9 @@ const ONEGOLearning: React.FC = () => {
           ) : (
             courses.map(course => (
               <div key={course.id} className="bg-white rounded-lg shadow-md overflow-hidden">
-                <img src={course.image_url} alt={course.title} className="w-full h-48 object-cover" />
+                <img src={course.image_url} alt={course.title?.replace(/^[⭐🌟★☆•*\-\s]+/, '')} className="w-full h-48 object-cover" />
                 <div className="p-4">
-                  <h3 className="text-lg font-semibold mb-2">{course.title}</h3>
+                  <h3 className="text-lg font-semibold mb-2">{course.title?.replace(/^[⭐🌟★☆•*\-\s]+/, '')}</h3>
                   <p className="text-gray-600">{course.description}</p>
                   <button 
                     onClick={() => handleCourseClick(course)}
@@ -248,7 +248,7 @@ const ONEGOLearning: React.FC = () => {
 
     return (
       <div className="p-8">
-        <h2 className="text-2xl font-bold mb-4">{selectedCourse.title}</h2>
+        <h2 className="text-2xl font-bold mb-4">{selectedCourse.title?.replace(/^[⭐🌟★☆•*\-\s]+/, '')}</h2>
         <p className="text-gray-700 mb-4">{selectedCourse.description}</p>
 
         <h3 className="text-xl font-semibold mb-2">Modules</h3>
@@ -259,7 +259,7 @@ const ONEGOLearning: React.FC = () => {
                 onClick={() => handleModuleClick(module)}
                 className="bg-gray-100 hover:bg-gray-200 text-gray-800 font-semibold py-2 px-4 rounded shadow"
               >
-                {module.title}
+                {module.title?.replace(/^[⭐🌟★☆•*\-\s]+/, '')}
               </button>
             </li>
           ))}
@@ -281,7 +281,7 @@ const ONEGOLearning: React.FC = () => {
 
     return (
       <div className="p-8">
-        <h2 className="text-2xl font-bold mb-4">{selectedModule.title}</h2>
+        <h2 className="text-2xl font-bold mb-4">{selectedModule.title?.replace(/^[⭐🌟★☆•*\-\s]+/, '')}</h2>
         <p className="text-gray-700 mb-4">{selectedModule.content}</p>
 
         <h3 className="text-xl font-semibold mb-2">Lessons</h3>
@@ -292,7 +292,7 @@ const ONEGOLearning: React.FC = () => {
                 onClick={() => handleLessonClick(lesson)}
                 className="bg-gray-100 hover:bg-gray-200 text-gray-800 font-semibold py-2 px-4 rounded shadow"
               >
-                {lesson.title}
+                {lesson.title?.replace(/^[⭐🌟★☆•*\-\s]+/, '')}
               </button>
             </li>
           ))}
@@ -314,7 +314,7 @@ const ONEGOLearning: React.FC = () => {
 
     return (
       <div className="p-8">
-        <h2 className="text-2xl font-bold mb-4">{selectedLesson.title}</h2>
+        <h2 className="text-2xl font-bold mb-4">{selectedLesson.title?.replace(/^[⭐🌟★☆•*\-\s]+/, '')}</h2>
         <p className="text-gray-700 mb-4">{selectedLesson.content}</p>
 
         {selectedLesson.video_url && (

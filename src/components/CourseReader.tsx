@@ -106,15 +106,16 @@ const CourseReader: React.FC<CourseReaderProps> = ({
         
         // If quizzes are already saved in course_plan, use them
         if (course.course_plan?.quizzes && Array.isArray(course.course_plan.quizzes)) {
-          setQuizzes(course.course_plan.quizzes);
+          setQuizzes(normalizeQuizzes(course.course_plan.quizzes));
           console.log('Loaded persisted quizzes from course_plan');
         } else {
           // Generate quizzes based on course content
           const generatedQuizzes = await generateQuizzes(courseSections, course.course_plan?.numberOfQuizzes || 1);
-          setQuizzes(generatedQuizzes);
+          const normalizedQuizzes = normalizeQuizzes(generatedQuizzes);
+          setQuizzes(normalizedQuizzes);
           console.log('Generated quizzes:', generatedQuizzes);
           // Persist generated quizzes so they appear in editor later
-          await persistQuizzes(generatedQuizzes, true);
+          await persistQuizzes(normalizedQuizzes, true);
         }
       } else {
         // Fallback to generating sections if modules don't exist
@@ -124,8 +125,9 @@ const CourseReader: React.FC<CourseReaderProps> = ({
         
         // Generate quizzes for fallback sections
         const generatedQuizzes = await generateQuizzes(generatedSections, 2);
-        setQuizzes(generatedQuizzes);
-        await persistQuizzes(generatedQuizzes, true);
+        const normalizedQuizzes = normalizeQuizzes(generatedQuizzes);
+        setQuizzes(normalizedQuizzes);
+        await persistQuizzes(normalizedQuizzes, true);
       }
       
       // No timer; just record session start time locally
@@ -280,7 +282,21 @@ Format as JSON with sections array containing: id, title, content, keyPoints, du
           
           if (data.success && data.questions) {
             console.log(`Generated ${data.questions.length} AI questions for section: ${section.title}`);
-            questions.push(...data.questions);
+            const sanitizedQuestions = data.questions.map((q: any, qi: number) => {
+              const options = Array.isArray(q.options) && q.options.length >= 2
+                ? q.options.map((opt: any) => String(opt).trim())
+                : ['Option 1', 'Option 2', 'Option 3', 'Option 4'];
+              let correct = Number.isInteger(q.correctAnswer) ? q.correctAnswer : 0;
+              if (correct < 0 || correct >= options.length) correct = 0;
+              return {
+                id: q.id || `ai-${Date.now()}-${qi}`,
+                question: String(q.question || `Question ${qi + 1}`),
+                options,
+                correctAnswer: correct,
+                explanation: String(q.explanation || '')
+              };
+            });
+            questions.push(...sanitizedQuestions);
           } else {
             console.error('Invalid response from AI quiz generation:', data);
             questions.push(createFallbackQuestion(section, questions.length));
@@ -316,6 +332,31 @@ Format as JSON with sections array containing: id, title, content, keyPoints, du
     }
     
     return quizzes;
+  };
+
+  // Ensure quizzes have valid question shapes and correct answers
+  const normalizeQuizzes = (inputQuizzes: Quiz[]): Quiz[] => {
+    return (inputQuizzes || []).map((qz, qi) => (
+      {
+        ...qz,
+        id: qz.id || `quiz-${qi + 1}`,
+        title: qz.title || `Knowledge Check ${qi + 1}`,
+        questions: (qz.questions || []).map((qq, qIndex) => {
+          const options = Array.isArray(qq.options) && qq.options.length >= 2
+            ? qq.options.map((opt: any) => String(opt).trim())
+            : ['Option 1', 'Option 2', 'Option 3', 'Option 4'];
+          let correct = typeof qq.correctAnswer === 'number' ? qq.correctAnswer : parseInt(String(qq.correctAnswer ?? '0'), 10);
+          if (isNaN(correct) || correct < 0 || correct >= options.length) correct = 0;
+          return {
+            id: qq.id || `q-${qi + 1}-${qIndex + 1}`,
+            question: String(qq.question || `Question ${qIndex + 1}`),
+            options,
+            correctAnswer: correct,
+            explanation: String(qq.explanation || '')
+          } as QuizQuestion;
+        })
+      }
+    ));
   };
 
   // Helper function to create fallback questions when AI generation fails
@@ -665,7 +706,7 @@ Format as JSON with sections array containing: id, title, content, keyPoints, du
                         <span className={`text-xs sm:text-sm font-medium ${
                           section.isCompleted ? 'text-green-700' : 'text-gray-700'
                         }`}>
-                          {section.title}
+                          {section.title?.replace(/^[⭐🌟★☆•*\-\s]+/, '')}
                         </span>
                       </div>
                     </button>
@@ -748,7 +789,18 @@ Format as JSON with sections array containing: id, title, content, keyPoints, du
     const [showResults, setShowResults] = useState(false);
     const [score, setScore] = useState(0);
     const [isEditing, setIsEditing] = useState(false);
-    const [editableQuiz, setEditableQuiz] = useState<Quiz>({ ...quiz, questions: quiz.questions.map(q => ({ ...q, options: [...q.options] })) });
+    const [editableQuiz, setEditableQuiz] = useState<Quiz>({ 
+      ...quiz, 
+      questions: quiz.questions.map(q => ({ 
+        ...q, 
+        options: Array.isArray(q.options) ? [...q.options] : ['Option 1', 'Option 2', 'Option 3', 'Option 4'],
+        correctAnswer: (() => {
+          const num = typeof q.correctAnswer === 'number' ? q.correctAnswer : parseInt(String(q.correctAnswer ?? '0'), 10);
+          if (isNaN(num) || num < 0 || num >= (Array.isArray(q.options) ? q.options.length : 4)) return 0;
+          return num;
+        })()
+      })) 
+    });
 
     const currentQuestion = quiz.questions[currentQuestionIndex];
 
@@ -846,10 +898,28 @@ Format as JSON with sections array containing: id, title, content, keyPoints, du
         ...prev,
         questions: prev.questions.map(q => (q.id === qid ? { ...q, correctAnswer: index } : q))
       }));
+      setQuizzes(prev => prev.map(qz => (
+        qz.id === editableQuiz.id
+          ? {
+              ...qz,
+              questions: qz.questions.map(q => (q.id === qid ? { ...q, correctAnswer: index } : q))
+            }
+          : qz
+      )));
     };
 
     const saveEdits = () => {
-      updateQuizInState(editableQuiz);
+      // Ensure all questions have valid correctAnswer before saving
+      const normalized: Quiz = {
+        ...editableQuiz,
+        questions: editableQuiz.questions.map((q, qi) => {
+          const options = Array.isArray(q.options) && q.options.length >= 2 ? q.options : ['Option 1', 'Option 2', 'Option 3', 'Option 4'];
+          let correct = typeof q.correctAnswer === 'number' ? q.correctAnswer : 0;
+          if (correct < 0 || correct >= options.length) correct = 0;
+          return { ...q, options, correctAnswer: correct };
+        })
+      };
+      updateQuizInState(normalized);
       setIsEditing(false);
     };
 
@@ -874,6 +944,9 @@ Format as JSON with sections array containing: id, title, content, keyPoints, du
                       onChange={(e) => updateQuestionText(q.id, e.target.value)}
                       className="w-full mt-1 p-2 border rounded"
                     />
+                    <div className="mt-2 text-xs text-green-700">
+                      Current correct answer: <span className="font-semibold">{(q.options[q.correctAnswer] ?? 'Not set')}</span>
+                    </div>
                   </div>
                   <button onClick={() => removeQuestion(q.id)} className="text-red-600 text-sm">Remove</button>
                 </div>
@@ -884,15 +957,19 @@ Format as JSON with sections array containing: id, title, content, keyPoints, du
                       <div key={oi} className="flex items-center space-x-2">
                         <input
                           type="radio"
-                          name={`correct-${q.id}`}
+                          name={`correct-${editableQuiz.id}-${qi}`}
                           checked={q.correctAnswer === oi}
                           onChange={() => setCorrect(q.id, oi)}
+                          title="Mark as correct answer"
                         />
                         <input
                           value={opt}
                           onChange={(e) => updateOptionText(q.id, oi, e.target.value)}
                           className="flex-1 p-2 border rounded"
                         />
+                        {q.correctAnswer === oi && (
+                          <span className="px-2 py-0.5 text-xs rounded-full bg-green-100 text-green-700 border border-green-200">Correct</span>
+                        )}
                         <button onClick={() => removeOption(q.id, oi)} className="text-red-600 text-sm">Delete</button>
                       </div>
                     ))}
