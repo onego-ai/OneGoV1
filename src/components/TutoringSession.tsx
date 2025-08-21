@@ -81,7 +81,6 @@ const TutoringSession: React.FC<TutoringSessionProps> = ({ course, user, onEnd, 
   const [showManualPlayButton, setShowManualPlayButton] = useState(false);
   const [sessionStartTime, setSessionStartTime] = useState<Date>(new Date());
   const [totalInteractions, setTotalInteractions] = useState(0);
-  const [expandedMessages, setExpandedMessages] = useState<Set<number>>(new Set());
   const { getEnhancedCompanyContext } = useWebsiteContext();
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -506,8 +505,8 @@ const TutoringSession: React.FC<TutoringSessionProps> = ({ course, user, onEnd, 
       const learnerDescription = course.course_plan?.learnerDescription || 'professionals';
       
       return {
-        displayText: `${baseDisplayText}${companyContext}\n\n**Quick start:**\n➜ We'll cover ${courseTitleDisplay} in small steps with practical examples.\n➜ I’ll keep it concise and check your understanding as we go.\n\nReady to begin?`,
-        speechText: `${baseSpeechText}${companyContext}. We will learn ${courseDescription} in small steps with practical examples. I will keep it concise and check your understanding as we go. Are you ready to begin?`
+        displayText: `${baseDisplayText}${companyContext}\n\n**Course Overview:**\n${courseTitleDisplay}\n\nWe'll focus on **${courseTitleDisplay}** with practical, role-relevant examples. I'll guide you through key concepts and applications step by step.\n\n${user.full_name?.split(' ')[0] || 'there'}, are you ready to get started?`,
+        speechText: `${baseSpeechText}${companyContext}\n\nCourse Overview: ${courseDescription}\n\nWe'll focus on ${courseDescription} with practical, role-relevant examples. I'll guide you through key concepts and applications step by step.\n\n${user.full_name?.split(' ')[0] || 'there'}, are you ready to get started?`
       };
     } else {
       const objective = course.course_plan?.objective || course.course_title;
@@ -516,8 +515,8 @@ const TutoringSession: React.FC<TutoringSessionProps> = ({ course, user, onEnd, 
       const learnerDescription = course.course_plan?.learnerDescription || 'students';
       
       return {
-        displayText: `Hi ${user.full_name?.split(' ')[0] || 'there'}! I'm **${course.course_plan?.tutorPersona || 'Leo'}** from **ONEGO Learning**.\n\n**Quick start:**\n➜ Topic: ${courseTitleDisplay}\n➜ We’ll learn in short steps and practice together.\n\nShall we start?`,
-        speechText: `Hi ${user.full_name?.split(' ')[0] || 'there'}! I'm ${course.course_plan?.tutorPersona || 'Leo'} from ONE GO Learning. Topic: ${courseDescription}. We will learn in short steps and practice together. Shall we start?`
+        displayText: `Hi ${user.full_name?.split(' ')[0] || 'there'}! I'm **${course.course_plan?.tutorPersona || 'Leo'}** from **ONEGO Learning**.\n\n**Course Overview:**\n${courseTitleDisplay}\n\nToday we're going to be learning about **${objective}**. I've prepared a structured approach to help you master this subject.\n\n${user.full_name?.split(' ')[0] || 'there'}, are you ready to get started?`,
+        speechText: `Hi ${user.full_name?.split(' ')[0] || 'there'}! I'm ${course.course_plan?.tutorPersona || 'Leo'} from ONE GO Learning.\n\nCourse Overview: ${courseDescription}\n\nToday we're going to be learning about ${objective}. I've prepared a structured approach to help you master this subject.\n\n${user.full_name?.split(' ')[0] || 'there'}, are you ready to get started?`
       };
     }
   };
@@ -1029,16 +1028,9 @@ COURSE: ${course.course_title}
 GOAL: ${course.course_plan?.goal || 'Help learners understand the course content'}
 TARGET: ${course.course_plan?.learnerDescription || 'Learners'}
 
-STYLE: Keep replies concise, 2-4 short bullet lines max (about 40–70 words total). Prefer:
-• One-sentence summary
-• 2–3 arrows with actionable steps or examples
-• One quick check question at the end
+STYLE: Keep responses short and digestible. Break explanations into 3–5 subtopics with bold mini‑headings and 1–2 short sentences each. Use arrow bullets (➜) when listing. Avoid stars. If the topic is large, suggest the next mini‑topic at the end (e.g., "Next: Key Risks — say 'continue'").
 
-RULES:
-- Never dump long paragraphs.
-- Use **bold** only for the most important term.
-- Use arrows (➜) for bullets.
-- End with a single question to keep it interactive.`;
+IMPORTANT: Provide direct, helpful answers. Do NOT ask users to choose between options or responses. Do NOT ask "What would you like to learn about?" Use **bold** for key points. Stay focused on the course topic and provide actionable learning. Be directive — guide the learning without asking for direction.`;
 
       console.log('System prompt length:', enhancedSystemPrompt.length);
       console.log('Chat history length:', messages.length);
@@ -1275,7 +1267,11 @@ RULES:
             </button>
             <button
               onClick={() => setMode('reading')}
-              className={`px-2 sm:px-3 py-1 rounded-md text-xs sm:text-sm font-medium transition-colors text-gray-600 hover:text-gray-900`}
+              className={`px-2 sm:px-3 py-1 rounded-md text-xs sm:text-sm font-medium transition-colors ${
+                mode === 'reading'
+                  ? 'bg-white text-gray-900 shadow-sm'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
             >
               <BookOpen className="h-3 w-3 sm:h-4 sm:w-4 inline mr-1" />
               <span className="hidden sm:inline">Read</span>
@@ -1412,23 +1408,15 @@ RULES:
                   onClick={() => handleTextClick(index, message.content)}
                   dangerouslySetInnerHTML={{
                     __html: (() => {
-                      const shorten = (html: string) => {
-                        // Break lines and keep first 4 bullet/lines max
-                        const lines = html.split(/\n+/);
-                        const limited = lines.slice(0, 4).join('\n');
-                        return limited;
-                      };
                       if (index === streamingMessageIndex && streamingText) {
                         const displayText = streamingText + (canClickToReveal ? '<span class="animate-pulse">|</span>' : '');
-                        return shorten(displayText)
+                        return displayText
                           .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-                          .replace(/\*(.*?)\*/g, '<em>$1</em>')
-                          .replace(/\u2022|\*\s/g, '➜ ');
+                          .replace(/\*(.*?)\*/g, '<em>$1</em>');
                       }
-                      return shorten(message.content)
+                      return message.content
                         .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-                        .replace(/\*(.*?)\*/g, '<em>$1</em>')
-                        .replace(/\u2022|\*\s/g, '➜ ');
+                        .replace(/\*(.*?)\*/g, '<em>$1</em>');
                     })()
                   }}
                 />
