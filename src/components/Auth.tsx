@@ -1,8 +1,9 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
+import { Turnstile } from '@/components/ui/Turnstile';
 
 interface AuthProps {
   onAuthSuccess: () => void;
@@ -19,6 +20,9 @@ const Auth: React.FC<AuthProps> = ({ onAuthSuccess }) => {
   const [showOTP, setShowOTP] = useState(false);
   const [otp, setOtp] = useState('');
   const [otpLoading, setOtpLoading] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState('');
+  const [turnstileVerified, setTurnstileVerified] = useState(false);
+  const turnstileRef = useRef<any>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -82,6 +86,66 @@ const Auth: React.FC<AuthProps> = ({ onAuthSuccess }) => {
     }
   };
 
+  const handleTurnstileVerify = async (token: string) => {
+    try {
+      setTurnstileToken(token);
+      setTurnstileVerified(true);
+      
+      // Verify token with our Supabase Edge Function
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+      
+      if (!supabaseUrl || !supabaseAnonKey) {
+        throw new Error('Supabase configuration missing');
+      }
+
+      const response = await fetch(`${supabaseUrl}/functions/v1/verify-turnstile`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${supabaseAnonKey}`,
+        },
+        body: JSON.stringify({ token }),
+      });
+
+      const result = await response.json();
+      
+      if (!result.success) {
+        setTurnstileVerified(false);
+        setTurnstileToken('');
+        toast({
+          title: "Turnstile Error",
+          description: "Please complete the Turnstile verification.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Turnstile verification error:', error);
+      setTurnstileVerified(false);
+      setTurnstileToken('');
+      toast({
+        title: "Verification Error",
+        description: "Failed to verify Turnstile. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleTurnstileExpired = () => {
+    setTurnstileVerified(false);
+    setTurnstileToken('');
+  };
+
+  const handleTurnstileError = () => {
+    setTurnstileVerified(false);
+    setTurnstileToken('');
+    toast({
+      title: "Turnstile Error",
+      description: "An error occurred with Turnstile. Please try again.",
+      variant: "destructive",
+    });
+  };
+
   const handleGoogleAuth = async () => {
     try {
       setLoading(true);
@@ -116,6 +180,16 @@ const Auth: React.FC<AuthProps> = ({ onAuthSuccess }) => {
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!turnstileVerified) {
+      toast({
+        title: "Verification Required",
+        description: "Please complete the Turnstile verification.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     setLoading(true);
 
     try {
@@ -410,6 +484,20 @@ const Auth: React.FC<AuthProps> = ({ onAuthSuccess }) => {
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
               required
               minLength={6}
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Verify you're human
+            </label>
+            <Turnstile
+              ref={turnstileRef}
+              siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY || '0x4AAAAAABkelv713e06-flZ'}
+              onVerify={handleTurnstileVerify}
+              onExpired={handleTurnstileExpired}
+              onError={handleTurnstileError}
+              className="flex justify-center"
             />
           </div>
 

@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, CheckCircle, XCircle, Users } from 'lucide-react';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
+import { Turnstile } from '@/components/ui/Turnstile';
 
 interface InvitationData {
   id: string;
@@ -42,6 +43,11 @@ const AcceptInvitation: React.FC = () => {
   const [otp, setOtp] = useState('');
   const [otpLoading, setOtpLoading] = useState(false);
   const [pendingUserData, setPendingUserData] = useState<any>(null);
+  
+  // Turnstile CAPTCHA states
+  const [turnstileToken, setTurnstileToken] = useState('');
+  const [turnstileVerified, setTurnstileVerified] = useState(false);
+  const turnstileRef = useRef<any>(null);
 
   useEffect(() => {
     const validateInvitation = async () => {
@@ -219,6 +225,38 @@ const AcceptInvitation: React.FC = () => {
     }
   };
 
+  // Turnstile CAPTCHA handlers
+  const handleTurnstileVerify = async (token: string) => {
+    try {
+      setTurnstileToken(token);
+      setTurnstileVerified(true);
+    } catch (error) {
+      console.error('Turnstile verification error:', error);
+      setTurnstileVerified(false);
+      setTurnstileToken('');
+      toast({
+        title: "Verification Error",
+        description: "Failed to verify Turnstile. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleTurnstileExpired = () => {
+    setTurnstileVerified(false);
+    setTurnstileToken('');
+  };
+
+  const handleTurnstileError = () => {
+    setTurnstileVerified(false);
+    setTurnstileToken('');
+    toast({
+      title: "Turnstile Error",
+      description: "An error occurred with Turnstile. Please try again.",
+      variant: "destructive",
+    });
+  };
+
   // OTP verification functions
   const handleVerifyOTP = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -310,6 +348,16 @@ const AcceptInvitation: React.FC = () => {
 
   const handleNewUserSignup = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!turnstileVerified) {
+      toast({
+        title: "Verification Required",
+        description: "Please complete the Turnstile verification.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     setProcessing(true);
 
     try {
@@ -358,6 +406,16 @@ const AcceptInvitation: React.FC = () => {
 
   const handleExistingUserLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!turnstileVerified) {
+      toast({
+        title: "Verification Required",
+        description: "Please complete the Turnstile verification.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     setProcessing(true);
 
     try {
@@ -641,6 +699,20 @@ const AcceptInvitation: React.FC = () => {
               />
             </div>
 
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Verify you're human
+              </label>
+              <Turnstile
+                ref={turnstileRef}
+                siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY || '0x4AAAAAABkelv713e06-flZ'}
+                onVerify={handleTurnstileVerify}
+                onExpired={handleTurnstileExpired}
+                onError={handleTurnstileError}
+                className="flex justify-center"
+              />
+            </div>
+
             <button
               type="submit"
               disabled={processing}
@@ -713,6 +785,20 @@ const AcceptInvitation: React.FC = () => {
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
                 required
                 minLength={6}
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Verify you're human
+              </label>
+              <Turnstile
+                ref={turnstileRef}
+                siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY || '0x4AAAAAABkelv713e06-flZ'}
+                onVerify={handleTurnstileVerify}
+                onExpired={handleTurnstileExpired}
+                onError={handleTurnstileError}
+                className="flex justify-center"
               />
             </div>
 
