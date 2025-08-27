@@ -92,23 +92,23 @@ const Auth: React.FC<AuthProps> = ({ onAuthSuccess }) => {
       setTurnstileVerified(true);
       
       // Verify token with our Supabase Edge Function
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-      
-      if (!supabaseUrl || !supabaseAnonKey) {
-        throw new Error('Supabase configuration missing');
-      }
-
-      const response = await fetch(`${supabaseUrl}/functions/v1/verify-turnstile`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${supabaseAnonKey}`,
-        },
-        body: JSON.stringify({ token }),
+      const response = await supabase.functions.invoke('verify-turnstile', {
+        body: { token }
       });
 
-      const result = await response.json();
+      if (response.error) {
+        console.error('Turnstile verification error:', response.error);
+        setTurnstileVerified(false);
+        setTurnstileToken('');
+        toast({
+          title: "Turnstile Error",
+          description: "Please complete the Turnstile verification.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const result = response.data;
       
       if (!result.success) {
         setTurnstileVerified(false);
